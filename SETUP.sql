@@ -6,10 +6,12 @@ CREATE TABLE IF NOT EXISTS threads (
   subject TEXT NOT NULL,
   comment TEXT NOT NULL,
   image_filename TEXT,
+  author_ip TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   last_bumped_at TIMESTAMPTZ DEFAULT NOW(),
   bump_count INTEGER DEFAULT 0,
-  locked BOOLEAN DEFAULT FALSE
+  locked BOOLEAN DEFAULT FALSE,
+  reactions JSONB DEFAULT '{}'
 );
 
 -- Create replies table
@@ -18,7 +20,9 @@ CREATE TABLE IF NOT EXISTS replies (
   thread_id INTEGER REFERENCES threads(id) ON DELETE CASCADE,
   comment TEXT NOT NULL,
   image_filename TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  author_ip TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  reactions JSONB DEFAULT '{}'
 );
 
 -- Create bans table
@@ -33,12 +37,10 @@ CREATE TABLE IF NOT EXISTS bans (
 CREATE INDEX IF NOT EXISTS idx_threads_bumped ON threads(last_bumped_at DESC);
 CREATE INDEX IF NOT EXISTS idx_replies_thread ON replies(thread_id);
 
--- Enable RLS (optional - for production)
--- ALTER TABLE threads ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE replies ENABLE ROW LEVEL SECURITY;
+-- Enable realtime for replies (for live updates)
+ALTER PUBLICATION supabase_realtime ADD TABLE replies;
 
--- Allow public read access (adjust for production)
--- CREATE POLICY "Allow public read threads" ON threads FOR SELECT USING (true);
--- CREATE POLICY "Allow public read replies" ON replies FOR SELECT USING (true);
--- CREATE POLICY "Allow public insert threads" ON threads FOR INSERT WITH CHECK (true);
--- CREATE POLICY "Allow public insert replies" ON replies FOR INSERT WITH CHECK (true);
+-- Allow public read/write access (disable RLS for now - add later for production)
+ALTER TABLE threads DISABLE ROW LEVEL SECURITY;
+ALTER TABLE replies DISABLE ROW LEVEL SECURITY;
+ALTER TABLE bans DISABLE ROW LEVEL SECURITY;

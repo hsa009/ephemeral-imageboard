@@ -18,9 +18,16 @@ function verifyPoW(nonce: string, timestamp: number): boolean {
   return true;
 }
 
+function getClientIP(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return request.headers.get('cf-connecting-ip') || 'anonymous';
+}
+
 export async function POST(request: NextRequest) {
   if (!supabaseAdmin || !s3Client) {
-    return NextResponse.json({ error: 'Service not configured' }, { status: 500 });
+    console.error('Service not configured:', { supabaseAdmin: !!supabaseAdmin, s3Client: !!s3Client });
+    return NextResponse.json({ error: 'Service not configured', details: 'Check environment variables' }, { status: 500 });
   }
 
   try {
@@ -46,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     if (image && image.size > 0) {
       const arrayBuffer = await image.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const uint8Array = new Uint8Array(arrayBuffer);
       const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', arrayBuffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
@@ -56,12 +63,16 @@ export async function POST(request: NextRequest) {
       const command = new PutObjectCommand({
         Bucket: getBucketName(),
         Key: imageFilename,
-        Body: buffer,
+        Body: uint8Array,
         ContentType: image.type,
       });
 
       await s3Client.send(command);
     }
+
+    const clientIP = getClientIP(request);
+    const ipHash = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientIP));
+    const hashedIP = Array.from(new Uint8Array(ipHash)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
 
     const { data, error } = await supabaseAdmin
       .from('threads')
@@ -69,18 +80,20 @@ export async function POST(request: NextRequest) {
         subject: sanitizedSubject,
         comment: sanitizedComment,
         image_filename: imageFilename,
+        author_ip: hashedIP,
       })
       .select()
       .single();
 
     if (error) {
       console.error('Supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 500 });
     }
 
     return NextResponse.json({ thread: data });
   } catch (error) {
     console.error('Error creating thread:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: 'Internal server error', details: errorMessage }, { status: 500 });
   }
 }

@@ -270,10 +270,43 @@ export default function Chat() {
         justifyContent: "space-between",
         alignItems: "center",
       }}>
-        <h1 style={{ fontSize: "1.2rem", margin: 0 }}>
-          <span style={{ color: "#ff4444" }}>🔗</span> Ghost Chat
-        </h1>
-        <span style={{ color: "#888", fontSize: "0.85rem" }}>{status}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button 
+            onClick={() => window.location.href = '/'}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#ff4444',
+              fontSize: '1.2rem',
+              cursor: 'pointer',
+              textDecoration: 'none'
+            }}
+          >
+            ←
+          </button>
+          <h1 style={{ fontSize: "1.2rem", margin: 0 }}>
+            <span style={{ color: "#ff4444" }}>🔗</span> Ghost Chat
+          </h1>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ color: "#888", fontSize: "0.85rem" }}>{status}</span>
+          {connecting && (
+            <button
+              onClick={() => { setConnecting(false); setStatus("Search cancelled"); }}
+              style={{
+                padding: "6px 12px",
+                fontSize: "0.8rem",
+                background: "#333",
+                color: "#fff",
+                border: "1px solid #555",
+                cursor: "pointer",
+                borderRadius: "4px",
+              }}
+            >
+              Stop
+            </button>
+          )}
+        </div>
       </header>
 
       {!connected && (
