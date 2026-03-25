@@ -1,0 +1,91 @@
+export const runtime = 'edge';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase';
+import { s3Client, getBucketName } from '@/lib/s3';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+interface ThreadRow {
+  id: number;
+  subject: string;
+  comment: string;
+  image_filename: string | null;
+  created_at: string;
+  last_bumped_at: string;
+  bump_count: number;
+  locked: boolean;
+  reactions: Record<string, number>;
+}
+
+interface ReplyRow {
+  id: number;
+  thread_id: number;
+  comment: string;
+  image_filename: string | null;
+  created_at: string;
+  reactions: Record<string, number>;
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!supabaseAdmin || !s3Client) {
+    return NextResponse.json({ error: 'Service not configured' }, { status: 500 });
+  }
+
+  try {
+    const { id } = await params;
+    const threadId = parseInt(id);
+
+    const { data: thread, error: threadError } = await supabaseAdmin
+      .from('threads')
+      .select('*')
+      .eq('id', threadId)
+      .single();
+
+    if (threadError || !thread) {
+      return NextResponse.json({ error: 'Thread not found' }, { status: 404 });
+    }
+
+    const { data: replies, error: repliesError } = await supabaseAdmin
+      .from('replies')
+      .select('*')
+      .eq('thread_id', threadId)
+      .order('created_at', { ascending: true });
+
+    if (repliesError) {
+      return NextResponse.json({ error: repliesError.message }, { status: 500 });
+    }
+
+    const processImage = async (obj: ThreadRow | ReplyRow) => {
+      if (obj.image_filename && s3Client) {
+        try {
+          const command = new GetObjectCommand({
+            Bucket: getBucketName(),
+            Key: obj.image_filename,
+          });
+          const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+          return { ...obj, image_filename: url };
+        } catch {
+          return { ...obj, image_filename: null };
+        }
+      }
+      return obj;
+    };
+
+    const threadWithImage = await processImage(thread);
+    const repliesWithImages = await Promise.all(
+      (replies || []).map(processImage)
+    );
+
+    return NextResponse.json({
+      thread: threadWithImage,
+      replies: repliesWithImages,
+    });
+  } catch (error) {
+    console.error('Error fetching thread:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
