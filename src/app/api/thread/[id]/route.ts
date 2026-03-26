@@ -32,12 +32,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!supabaseAdmin || !s3Client) {
-    return NextResponse.json({ error: 'Service not configured' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Service not configured', 
+      details: { supabaseAdmin: !!supabaseAdmin, s3Client: !!s3Client }
+    }, { status: 500 });
   }
 
   try {
     const { id } = await params;
     const threadId = parseInt(id);
+
+    if (isNaN(threadId)) {
+      return NextResponse.json({ error: 'Invalid thread ID' }, { status: 400 });
+    }
 
     const { data: thread, error: threadError } = await supabaseAdmin
       .from('threads')
@@ -46,7 +53,11 @@ export async function GET(
       .single();
 
     if (threadError || !thread) {
-      return NextResponse.json({ error: 'Thread not found' }, { status: 404 });
+      console.error('Thread fetch error:', threadError);
+      return NextResponse.json({ 
+        error: 'Thread not found', 
+        details: threadError 
+      }, { status: 404 });
     }
 
     const { data: replies, error: repliesError } = await supabaseAdmin
@@ -56,7 +67,11 @@ export async function GET(
       .order('created_at', { ascending: true });
 
     if (repliesError) {
-      return NextResponse.json({ error: repliesError.message }, { status: 500 });
+      console.error('Replies fetch error:', repliesError);
+      return NextResponse.json({ 
+        error: repliesError.message, 
+        details: repliesError 
+      }, { status: 500 });
     }
 
     const processImage = async (obj: ThreadRow | ReplyRow) => {
@@ -81,11 +96,16 @@ export async function GET(
     );
 
     return NextResponse.json({
+      success: true,
       thread: threadWithImage,
       replies: repliesWithImages,
     });
   } catch (error) {
     console.error('Error fetching thread:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ 
+      error: errorMessage, 
+      details: String(error) 
+    }, { status: 500 });
   }
 }

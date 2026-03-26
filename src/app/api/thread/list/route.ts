@@ -8,7 +8,18 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export async function GET(_request: NextRequest) {
   if (!supabaseAdmin || !s3Client) {
-    return NextResponse.json({ error: 'Service not configured' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Service not configured', 
+      details: { 
+        supabaseAdmin: !!supabaseAdmin, 
+        s3Client: !!s3Client,
+        envCheck: { 
+          SUPABASE_URL: !!process.env.SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+          IDRIVE_E2_ENDPOINT: !!process.env.IDRIVE_E2_ENDPOINT
+        }
+      }
+    }, { status: 500 });
   }
 
   try {
@@ -19,7 +30,13 @@ export async function GET(_request: NextRequest) {
       .limit(150);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('Supabase error:', error);
+      return NextResponse.json({ 
+        success: false, 
+        error: error.message, 
+        details: error,
+        code: error.code 
+      }, { status: 500 });
     }
 
     const threadsWithImages = await Promise.all(
@@ -41,9 +58,14 @@ export async function GET(_request: NextRequest) {
       })
     );
 
-    return NextResponse.json({ threads: threadsWithImages });
+    return NextResponse.json({ success: true, threads: threadsWithImages });
   } catch (error) {
     console.error('Error fetching threads:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ 
+      success: false, 
+      error: errorMessage, 
+      details: String(error) 
+    }, { status: 500 });
   }
 }
