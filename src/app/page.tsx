@@ -67,16 +67,17 @@ async function generatePoW(): Promise<{ nonce: string; timestamp: number }> {
   });
 }
 
-async function verifyPoW(nonce: string, timestamp: number): Promise<boolean> {
+async function verifyPoW(nonce: string, timestamp: number): Promise<{ valid: boolean; error?: string }> {
   try {
     const res = await fetch("/api/verify-pow", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nonce, timestamp }),
     });
-    return res.ok;
-  } catch {
-    return false;
+    const data = await res.json();
+    return { valid: res.ok && data.valid, error: data.error || data.message };
+  } catch (e) {
+    return { valid: false, error: 'Network error' };
   }
 }
 
@@ -184,9 +185,9 @@ export default function Home() {
     setLoading(true);
     setPowLoading(true);
 
-    const isValid = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
-    if (!isValid) {
-      alert("Please try again - verification failed");
+    const { valid, error } = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
+    if (!valid) {
+      alert(`Verification failed: ${error}. Generating new challenge...`);
       setLoading(false);
       setPowLoading(false);
       const newPoW = await generatePoW();
@@ -231,9 +232,9 @@ export default function Home() {
     setLoading(true);
     setPowLoading(true);
 
-    const isValid = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
-    if (!isValid) {
-      alert("Please try again - verification failed");
+    const { valid, error } = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
+    if (!valid) {
+      alert(`Verification failed: ${error}. Generating new challenge...`);
       setLoading(false);
       setPowLoading(false);
       const newPoW = await generatePoW();
