@@ -18,29 +18,45 @@ export const getBucketName = () => bucket;
 export const s3Client = { send: () => Promise.resolve({}) } as unknown as { send: (cmd: unknown) => Promise<unknown> };
 
 function getHost(): string {
-  // IDrive e2 uses path-style: bucket.endpoint
   return `${bucket}.${endpoint.replace(/^https?:\/\//, '')}`;
 }
 
-// Direct fetch API for S3 operations (bypasses AWS SDK XML parsing issues)
+function formatDate(date: Date): string {
+  // ISO8601 Basic Format: YYYYMMDDTHHmmssZ
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hour = String(date.getUTCHours()).padStart(2, '0');
+  const min = String(date.getUTCMinutes()).padStart(2, '0');
+  const sec = String(date.getUTCSeconds()).padStart(2, '0');
+  return `${year}${month}${day}T${hour}${min}${sec}Z`;
+}
+
+function formatDateStamp(dateStr: string): string {
+  // YYYYMMDD
+  return dateStr.slice(0, 8);
+}
+
+// Direct fetch API for S3 operations using presigned URL approach
 export async function uploadDirect(key: string, body: Uint8Array, contentType: string): Promise<void> {
   if (!isConfigured) {
     throw new Error('S3 not configured');
   }
 
-  // URL-encode the key to handle special characters
-  const encodedKey = encodeURIComponent(key).replace(/%2F/g, '/');
-  const date = new Date().toUTCString().replace(/[-:]/g, '').replace(/\.\d{3}/, 'Z');
-  const dateStamp = date.slice(0, 8);
+  const now = new Date();
+  const amzDate = formatDate(now);
+  const dateStamp = formatDateStamp(amzDate);
   
   const host = getHost();
-  const path = `/${encodedKey}`;
+  const path = `/${key}`;
+  
+  console.log('S3 Upload Debug:', { endpoint, bucket, host, key: key.slice(0, 20), amzDate, dateStamp });
   
   const headers: Record<string, string> = {
     'Content-Type': contentType,
     'Content-Length': body.length.toString(),
     'Host': host,
-    'x-amz-date': date,
+    'x-amz-date': amzDate,
     'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
   };
 
@@ -50,7 +66,6 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
     .map(([k, v]) => `${k.toLowerCase()}:${v}`).join('\n') + '\n';
   const signedHeaders = sortedHeaders.map(([k]) => k.toLowerCase()).join(';');
   
-  // Create canonical request (AWS Signature V4)
   const canonicalRequest = [
     'PUT',
     path,
@@ -60,15 +75,11 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
     'UNSIGNED-PAYLOAD',
   ].join('\n');
 
-  console.log('Upload signing:', { host, path, date, dateStamp });
-
   const signature = await signRequest(canonicalRequest, accessKey, secretKey, dateStamp, region);
   
   headers['Authorization'] = `AWS4-HMAC-SHA256 Credential=${accessKey}/${dateStamp}/${region}/s3/aws4_request, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
   const uploadUrl = `${endpoint}/${bucket}${path}`;
-  console.log('Upload URL:', uploadUrl);
-  console.log('Auth header:', headers['Authorization']?.slice(0, 50) + '...');
 
   const response = await fetch(uploadUrl, {
     method: 'PUT',
@@ -88,27 +99,28 @@ export async function getSignedUrl(key: string, expiresIn: number = 3600): Promi
     throw new Error('S3 not configured');
   }
 
-  const encodedKey = encodeURIComponent(key).replace(/%2F/g, '/');
-  const date = new Date().toUTCString().replace(/[-:]/g, '').replace(/\.\d{3}/, 'Z');
-  const dateStamp = date.slice(0, 8);
+  const now = new Date();
+  const amzDate = formatDate(now);
+  const dateStamp = formatDateStamp(amzDate);
   
   const host = getHost();
-  const path = `/${encodedKey}`;
+  const path = `/${key}`;
   const expiry = Math.floor(Date.now() / 1000) + expiresIn;
 
   const queryParams = [
     `X-Amz-Algorithm=AWS4-HMAC-SHA256`,
     `X-Amz-Credential=${encodeURIComponent(accessKey)}/${dateStamp}/${region}/s3/aws4_request`,
-    `X-Amz-Date=${date}`,
+    `X-Amz-Date=${amzDate}`,
     `X-Amz-Expires=${expiresIn}`,
     `X-Amz-SignedHeaders=host`,
-  ].join('&');
+  ].sort()
+    .join('&');
 
   const fullPath = `${path}?${queryParams}`;
   
   const headers: Record<string, string> = {
     'Host': host,
-    'x-amz-date': date,
+    'x-amz-date': amzDate,
     'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
   };
 
