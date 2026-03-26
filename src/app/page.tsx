@@ -26,6 +26,39 @@ interface Reply {
 
 const EMOJI_LIST = ["👍", "👎", "😂", "😢", "😮", "🔥", "💀", "🎉"];
 
+const REACTION_STORAGE_KEY = "0null_reactions";
+
+function getReactedIds(): Record<string, string[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = localStorage.getItem(REACTION_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+function hasReacted(type: string, id: number, emoji: string): boolean {
+  const key = `${type}_${id}`;
+  const reacted = getReactedIds();
+  return reacted[key]?.includes(emoji) || false;
+}
+
+function saveReaction(type: string, id: number, emoji: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const key = `${type}_${id}`;
+    const reacted = getReactedIds();
+    if (!reacted[key]) reacted[key] = [];
+    if (!reacted[key].includes(emoji)) {
+      reacted[key].push(emoji);
+      localStorage.setItem(REACTION_STORAGE_KEY, JSON.stringify(reacted));
+    }
+  } catch (e) {
+    console.error("Failed to save reaction:", e);
+  }
+}
+
 const PlusIcon = () => (
   <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
     <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
@@ -139,6 +172,36 @@ export default function Home() {
   };
 
   const addReaction = async (type: string, id: number, emoji: string) => {
+    if (hasReacted(type, id, emoji)) return;
+
+    const key = type === "thread" ? "replies" : "reactions";
+    const itemId = type === "thread" ? id : (() => { const r = replies.find(r => r.id === id); return r ? r.id : 0; })();
+
+    if (type === "thread") {
+      setThreads(prev => prev.map(t => {
+        if (t.id === id) {
+          const reactions = { ...t.reactions };
+          reactions[emoji] = (reactions[emoji] || 0) + 1;
+          return { ...t, reactions };
+        }
+        return t;
+      }));
+      if (selectedThread?.id === id) {
+        setSelectedThread(prev => prev ? { ...prev, reactions: { ...prev.reactions, [emoji]: (prev.reactions?.[emoji] || 0) + 1 } } : null);
+      }
+    } else {
+      setReplies(prev => prev.map(r => {
+        if (r.id === id) {
+          const reactions = { ...r.reactions };
+          reactions[emoji] = (reactions[emoji] || 0) + 1;
+          return { ...r, reactions };
+        }
+        return r;
+      }));
+    }
+
+    saveReaction(type, id, emoji);
+
     try {
       await fetch("/api/react", {
         method: "POST",
@@ -313,10 +376,12 @@ export default function Home() {
                 {EMOJI_LIST.map((emoji) => (
                   <button
                     key={emoji}
-                    className={`reaction-btn ${selectedThread.reactions?.[emoji] ? 'active' : ''}`}
+                    className={`reaction-btn ${hasReacted('thread', selectedThread.id, emoji) ? 'reacted' : ''}`}
                     onClick={() => addReaction("thread", selectedThread.id, emoji)}
+                    disabled={hasReacted('thread', selectedThread.id, emoji)}
                   >
-                    {emoji} {selectedThread.reactions?.[emoji] || ""}
+                    <span className="reaction-emoji">{emoji}</span>
+                    <span className="reaction-count">{selectedThread.reactions?.[emoji] || ""}</span>
                   </button>
                 ))}
               </div>
@@ -343,10 +408,12 @@ export default function Home() {
                 {EMOJI_LIST.map((emoji) => (
                   <button
                     key={emoji}
-                    className={`reaction-btn ${reply.reactions?.[emoji] ? 'active' : ''}`}
+                    className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`}
                     onClick={() => addReaction("reply", reply.id, emoji)}
+                    disabled={hasReacted('reply', reply.id, emoji)}
                   >
-                    {emoji} {reply.reactions?.[emoji] || ""}
+                    <span className="reaction-emoji">{emoji}</span>
+                    <span className="reaction-count">{reply.reactions?.[emoji] || ""}</span>
                   </button>
                 ))}
               </div>
