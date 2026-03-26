@@ -3,7 +3,7 @@ export const runtime = 'edge';
 import '@/lib/polyfill';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getBucketName, uploadDirect, getSignedUrl as getSignedUrlDirect } from '@/lib/s3';
+import { getBucketName, uploadDirect, getReadSignedUrl } from '@/lib/s3';
 import { hashIP } from '@/lib/ip-hash';
 import { verifyPoW } from '@/lib/pow';
 

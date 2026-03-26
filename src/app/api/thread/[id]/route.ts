@@ -3,7 +3,7 @@ export const runtime = 'edge';
 import '@/lib/polyfill';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getSignedUrl } from '@/lib/s3';
+import { getReadSignedUrl } from '@/lib/s3';
 
 interface ThreadRow {
   id: number;
@@ -76,7 +76,7 @@ export async function GET(
     const processImage = async (obj: ThreadRow | ReplyRow) => {
       if (obj.image_filename) {
         try {
-          const url = await getSignedUrl(obj.image_filename, 3600);
+          const url = await getReadSignedUrl(obj.image_filename, 3600);
           return { ...obj, image_filename: url };
         } catch {
           return { ...obj, image_filename: null };

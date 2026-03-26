@@ -3,7 +3,7 @@ export const runtime = 'edge';
 import '@/lib/polyfill';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getSignedUrl } from '@/lib/s3';
+import { getReadSignedUrl } from '@/lib/s3';
 
 export async function GET(_request: NextRequest) {
   try {
@@ -38,7 +38,7 @@ export async function GET(_request: NextRequest) {
       (threads || []).map(async (thread) => {
         if (thread.image_filename) {
           try {
-            const url = await getSignedUrl(thread.image_filename, 3600);
+            const url = await getReadSignedUrl(thread.image_filename, 3600);
             return { ...thread, image_filename: url };
           } catch (e) {
             console.error('Failed to generate signed URL:', e);
