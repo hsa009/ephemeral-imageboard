@@ -344,7 +344,7 @@ export default function Home() {
     return (
       <div className="container">
         <header>
-          <h1><span>IB</span></h1>
+          <h1><span>0null</span></h1>
           <nav className="nav-links">
             <button onClick={() => setGalleryMode(!galleryMode)} className="btn-secondary" style={{ padding: "8px 16px" }}>
               {galleryMode ? "Text Mode" : "Gallery"}
@@ -462,7 +462,7 @@ export default function Home() {
   return (
     <div className="container">
       <header>
-        <h1><span>IB</span></h1>
+        <h1><span>0null</span></h1>
         <nav className="nav-links">
           <a href="/chat">Chat</a>
           <a href="#" onClick={() => setShowCreateForm(!showCreateForm)}>New Thread</a>
