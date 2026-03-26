@@ -1,3 +1,13 @@
+// Polyfill XMLParser for Edge runtime - AWS SDK needs this
+const globalAny = globalThis as unknown as Record<string, unknown>;
+if (!globalAny.XMLParser) {
+  globalAny.XMLParser = class {
+    parseFromString(str: string) {
+      return str;
+    }
+  };
+}
+
 import { S3Client } from '@aws-sdk/client-s3';
 
 const endpoint = process.env.IDRIVE_E2_ENDPOINT;
@@ -18,7 +28,7 @@ export const s3Client = (endpoint && region && accessKey && secretKey)
         accessKeyId: accessKey,
         secretAccessKey: secretKey,
       },
-      forcePathStyle: true
+      forcePathStyle: true,
     })
   : null;
 
