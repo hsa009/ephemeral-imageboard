@@ -4,22 +4,10 @@ import '@/lib/polyfill';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { uploadDirect } from '@/lib/s3';
-import { hashIP, getClientIP } from '@/lib/ip-hash';
+import { hashIP } from '@/lib/ip-hash';
+import { verifyPoW } from '@/lib/pow';
 
 const BUMP_LIMIT = 10;
-
-const POW_DIFFICULTY = '0000';
-const POW_MAX_AGE = 60000;
-
-function verifyPoW(nonce: string, timestamp: number): boolean {
-  if (!nonce || !timestamp) return false;
-  if (Date.now() - timestamp > POW_MAX_AGE) return false;
-  
-  const [, hash] = nonce.split('-');
-  if (!hash || !hash.startsWith(POW_DIFFICULTY)) return false;
-  
-  return true;
-}
 
 export async function POST(
   request: NextRequest,
@@ -54,8 +42,9 @@ export async function POST(
       return NextResponse.json({ error: 'Comment required' }, { status: 400 });
     }
 
-    if (!verifyPoW(powNonce, powTimestamp)) {
-      return NextResponse.json({ error: 'Invalid proof of work' }, { status: 403 });
+    const powResult = verifyPoW(powNonce, powTimestamp);
+    if (!powResult.valid) {
+      return NextResponse.json({ error: powResult.message || 'Invalid proof of work', code: powResult.error }, { status: 403 });
     }
 
     const sanitizedComment = comment.replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -151,4 +140,10 @@ export async function POST(
       details: String(error)
     }, { status: 500 });
   }
+}
+
+function getClientIP(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return request.headers.get('cf-connecting-ip') || '127.0.0.1';
 }
