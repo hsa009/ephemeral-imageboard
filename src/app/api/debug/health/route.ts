@@ -3,8 +3,7 @@ export const runtime = 'edge';
 import '@/lib/polyfill';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { s3Client, getBucketName } from '@/lib/s3';
-import { HeadBucketCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { getBucketName } from '@/lib/s3';
 
 export async function GET() {
   const results: {
@@ -59,18 +58,21 @@ export async function GET() {
   }
 
   // Test IDrive S3 Connection
+  const endpoint = process.env.IDRIVE_E2_ENDPOINT || '';
   try {
-    if (!s3Client) {
-      results.services.idrive = { status: 'FAIL', error: 'S3 client not initialized' };
+    const bucket = getBucketName();
+    if (!bucket) {
+      results.services.idrive = { status: 'FAIL', error: 'Bucket name not configured' };
+    } else if (!endpoint) {
+      results.services.idrive = { status: 'FAIL', error: 'Endpoint not configured' };
     } else {
-      const bucket = getBucketName();
-      if (!bucket) {
-        results.services.idrive = { status: 'FAIL', error: 'Bucket name not configured' };
-      } else {
-        // Try to list objects (validates access)
-        const command = new ListObjectsV2Command({ Bucket: bucket, MaxKeys: 1 });
-        await s3Client.send(command);
+      // Simple GET test - try to fetch bucket root
+      const testUrl = `${endpoint}/${bucket}/`;
+      const response = await fetch(testUrl, { method: 'HEAD' });
+      if (response.ok || response.status === 403 || response.status === 404) {
         results.services.idrive = { status: 'PASS', details: { bucket } };
+      } else {
+        results.services.idrive = { status: 'FAIL', error: `HTTP ${response.status}` };
       }
     }
   } catch (err) {

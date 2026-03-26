@@ -3,9 +3,7 @@ export const runtime = 'edge';
 import '@/lib/polyfill';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { s3Client, getBucketName } from '@/lib/s3';
-import { GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { getSignedUrl } from '@/lib/s3';
 
 interface ThreadRow {
   id: number;
@@ -32,10 +30,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!supabaseAdmin || !s3Client) {
+  if (!supabaseAdmin) {
     return NextResponse.json({ 
       error: 'Service not configured', 
-      details: { supabaseAdmin: !!supabaseAdmin, s3Client: !!s3Client }
+      details: { supabaseAdmin: false }
     }, { status: 500 });
   }
 
@@ -76,13 +74,9 @@ export async function GET(
     }
 
     const processImage = async (obj: ThreadRow | ReplyRow) => {
-      if (obj.image_filename && s3Client) {
+      if (obj.image_filename) {
         try {
-          const command = new GetObjectCommand({
-            Bucket: getBucketName(),
-            Key: obj.image_filename,
-          });
-          const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+          const url = await getSignedUrl(obj.image_filename, 3600);
           return { ...obj, image_filename: url };
         } catch {
           return { ...obj, image_filename: null };

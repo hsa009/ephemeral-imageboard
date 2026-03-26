@@ -3,8 +3,7 @@ export const runtime = 'edge';
 import '@/lib/polyfill';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { s3Client, getBucketName } from '@/lib/s3';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { uploadDirect } from '@/lib/s3';
 import { hashIP, getClientIP } from '@/lib/ip-hash';
 
 const BUMP_LIMIT = 10;
@@ -34,17 +33,6 @@ export async function POST(
         envCheck: {
           SUPABASE_URL: !!process.env.SUPABASE_URL,
           SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        }
-      }, { status: 500 });
-    }
-
-    if (!s3Client) {
-      return NextResponse.json({
-        service: 'IDrive_S3_Client',
-        error: 'S3 client not initialized',
-        envCheck: {
-          IDRIVE_E2_ENDPOINT: !!process.env.IDRIVE_E2_ENDPOINT,
-          IDRIVE_E2_REGION: !!process.env.IDRIVE_E2_REGION,
         }
       }, { status: 500 });
     }
@@ -102,14 +90,7 @@ export async function POST(
         const ext = image.name.split('.').pop() || 'webp';
         imageFilename = `${imgHash}.${ext}`;
 
-        const command = new PutObjectCommand({
-          Bucket: getBucketName(),
-          Key: imageFilename,
-          Body: uint8Array,
-          ContentType: image.type,
-        });
-
-        await s3Client.send(command);
+        await uploadDirect(imageFilename, uint8Array, image.type);
       } catch (imgErr) {
         return NextResponse.json({
           service: 'IDrive_S3_Upload',
