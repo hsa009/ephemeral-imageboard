@@ -131,7 +131,7 @@ export default function Home() {
   const [previewPost, setPreviewPost] = useState<{ x: number; y: number; content: string } | null>(null);
   const [pendingReplies, setPendingReplies] = useState<{ id: string; comment: string; image_filename: string | null }[]>([]);
   const [currentPoW, setCurrentPoW] = useState<{ nonce: string; timestamp: number } | null>(null);
-  const [galleryMode, setGalleryMode] = useState(false);
+  const [imagesMode, setImagesMode] = useState(false);
 
   useEffect(() => {
     fetchThreads();
@@ -346,14 +346,14 @@ export default function Home() {
         <header>
           <h1><span>0null</span></h1>
           <nav className="nav-links">
-            <button onClick={() => setGalleryMode(!galleryMode)} className="btn-secondary" style={{ padding: "8px 16px" }}>
-              {galleryMode ? "Text Mode" : "Gallery"}
+            <button onClick={() => setImagesMode(!imagesMode)} className="btn-secondary" style={{ padding: "8px 16px" }}>
+              {imagesMode ? "Thread" : "Images"}
             </button>
             <a href="#" onClick={() => setSelectedThread(null)}>← Catalog</a>
           </nav>
         </header>
 
-        <div className={`thread-view ${galleryMode ? 'gallery-mode' : ''}`}>
+        <div className={`thread-view ${imagesMode ? 'images-mode' : ''}`}>
           <div className="thread-op">
             <div className="thread-op-header">
               {selectedThread.image_filename && (

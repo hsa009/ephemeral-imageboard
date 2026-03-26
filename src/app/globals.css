@@ -504,11 +504,11 @@ header h1 span {
   margin-top: 0;
 }
 
-.gallery-mode .thread-op {
+.images-mode .thread-op {
   display: none;
 }
 
-.gallery-mode .reply-image {
+.images-mode .reply-image {
   max-width: 100%;
   max-height: 400px;
 }
