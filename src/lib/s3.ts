@@ -1,9 +1,12 @@
-// Polyfill XMLParser for Edge runtime - AWS SDK needs this
-const globalAny = globalThis as unknown as Record<string, unknown>;
-if (!globalAny.XMLParser) {
-  globalAny.XMLParser = class {
-    parseFromString(str: string) {
-      return str;
+// Add this at the VERY top of the file, above your imports
+if (typeof (globalThis as any).DOMParser === 'undefined') {
+  (globalThis as any).DOMParser = class {
+    parseFromString(markup: string) {
+      return {
+        documentElement: markup,
+        getElementsByTagName: () => [],
+        querySelector: () => null,
+      };
     }
   };
 }
