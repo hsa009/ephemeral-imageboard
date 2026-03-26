@@ -1,4 +1,4 @@
-// Add this at the VERY top of the file, above your imports
+/* eslint-disable @typescript-eslint/no-explicit-any */
 if (typeof (globalThis as any).DOMParser === 'undefined') {
   (globalThis as any).DOMParser = class {
     parseFromString(markup: string) {
@@ -10,6 +10,7 @@ if (typeof (globalThis as any).DOMParser === 'undefined') {
     }
   };
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 import { S3Client } from '@aws-sdk/client-s3';
 
