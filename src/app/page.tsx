@@ -62,6 +62,36 @@ function saveReaction(type: string, id: number, emoji: string) {
   }
 }
 
+// Local identity storage for thread/reply IDs
+const POSTS_STORAGE_KEY = "0null_posts";
+
+function getMyPosts(): number[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(POSTS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMyPost(postId: number) {
+  if (typeof window === "undefined") return;
+  try {
+    const posts = getMyPosts();
+    if (!posts.includes(postId)) {
+      posts.push(postId);
+      localStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(posts));
+    }
+  } catch (e) {
+    console.error("Failed to save post ID:", e);
+  }
+}
+
+function isMyPost(postId: number): boolean {
+  return getMyPosts().includes(postId);
+}
+
 const PlusIcon = () => (
   <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
     <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
@@ -135,6 +165,8 @@ export default function Home() {
   const [pendingReplies, setPendingReplies] = useState<{ id: string; comment: string; image_filename: string | null }[]>([]);
   const [currentPoW, setCurrentPoW] = useState<{ nonce: string; timestamp: number } | null>(null);
   const [imagesMode, setImagesMode] = useState(true);
+  const [username, setUsername] = useState("");
+  const [replyingTo, setReplyingTo] = useState<{ id: number; comment: string } | null>(null);
 
   useEffect(() => {
     fetchThreads();
@@ -176,9 +208,6 @@ export default function Home() {
 
   const addReaction = async (type: string, id: number, emoji: string) => {
     if (hasReacted(type, id, emoji)) return;
-
-    const key = type === "thread" ? "replies" : "reactions";
-    const itemId = type === "thread" ? id : (() => { const r = replies.find(r => r.id === id); return r ? r.id : 0; })();
 
     if (type === "thread") {
       setThreads(prev => prev.map(t => {
@@ -273,6 +302,7 @@ export default function Home() {
       formData.append("comment", comment);
       formData.append("pow_nonce", currentPoW.nonce);
       formData.append("pow_timestamp", currentPoW.timestamp.toString());
+      if (username) formData.append("username", username);
       if (imageFile) formData.append("image", imageFile);
 
       const res = await fetch("/api/thread/create", { method: "POST", body: formData });
@@ -282,6 +312,8 @@ export default function Home() {
         setComment("");
         setImageFile(null);
         setShowCreateForm(false);
+        const data = await res.json();
+        if (data.thread?.id) saveMyPost(data.thread.id);
         fetchThreads();
         const newPoW = await generatePoW();
         setCurrentPoW(newPoW);
@@ -318,13 +350,18 @@ export default function Home() {
       formData.append("comment", replyComment);
       formData.append("pow_nonce", currentPoW.nonce);
       formData.append("pow_timestamp", currentPoW.timestamp.toString());
+      if (username) formData.append("username", username);
+      if (replyingTo) formData.append("reply_to_id", replyingTo.id.toString());
       if (replyImage) formData.append("image", replyImage);
 
       const res = await fetch(`/api/thread/${selectedThread.id}/reply`, { method: "POST", body: formData });
 
       if (res.ok) {
+        const data = await res.json();
+        if (data.reply?.id) saveMyPost(data.reply.id);
         setReplyComment("");
         setReplyImage(null);
+        setReplyingTo(null);
         fetchReplies(selectedThread.id);
         fetchThreads();
         const newPoW = await generatePoW();
@@ -374,7 +411,12 @@ export default function Home() {
               </div>
             </div>
             <div className="thread-op-footer">
-              <div className="thread-meta">Posted {new Date(selectedThread.created_at).toLocaleString()}</div>
+              <div className="thread-meta">
+                {selectedThread.username && selectedThread.username !== 'Anonymous' && (
+                  <span className="username-display">{selectedThread.username} • </span>
+                )}
+                Posted {new Date(selectedThread.created_at).toLocaleString()}
+              </div>
               <div className="reactions">
                 {EMOJI_LIST.map((emoji) => (
                   <button
@@ -394,9 +436,17 @@ export default function Home() {
           {replies.map((reply) => (
             <div key={reply.id} className="reply">
               <div className="reply-header">
+                {reply.username && reply.username !== 'Anonymous' && (
+                  <span className="username-display">{reply.username} • </span>
+                )}
                 <span>#{reply.id}</span>
                 <span>{new Date(reply.created_at).toLocaleString()}</span>
               </div>
+              {reply.reply_to_id && (
+                <div className="quote-box">
+                  In reply to #{reply.reply_to_id}
+                </div>
+              )}
               <div className="reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
               {reply.image_filename && (
                 <img
@@ -407,18 +457,26 @@ export default function Home() {
                   onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)}
                 />
               )}
-              <div className="reactions">
-                {EMOJI_LIST.map((emoji) => (
-                  <button
-                    key={emoji}
-                    className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`}
-                    onClick={() => addReaction("reply", reply.id, emoji)}
-                    disabled={hasReacted('reply', reply.id, emoji)}
-                  >
-                    <span className="reaction-emoji">{emoji}</span>
-                    <span className="reaction-count">{reply.reactions?.[emoji] || ""}</span>
-                  </button>
-                ))}
+              <div className="reply-footer">
+                <div className="reactions">
+                  {EMOJI_LIST.map((emoji) => (
+                    <button
+                      key={emoji}
+                      className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`}
+                      onClick={() => addReaction("reply", reply.id, emoji)}
+                      disabled={hasReacted('reply', reply.id, emoji)}
+                    >
+                      <span className="reaction-emoji">{emoji}</span>
+                      <span className="reaction-count">{reply.reactions?.[emoji] || ""}</span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="reply-action-btn"
+                  onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}
+                >
+                  Reply
+                </button>
               </div>
             </div>
           ))}
@@ -431,8 +489,20 @@ export default function Home() {
           ))}
 
           <div className="reply-form">
-            <h3>Reply to thread</h3>
+            {replyingTo && (
+              <div className="reply-indicator">
+                Replying to #{replyingTo.id} 
+                <button onClick={() => setReplyingTo(null)} className="cancel-reply">X</button>
+              </div>
+            )}
             <form onSubmit={handleReply}>
+              <input 
+                type="text" 
+                placeholder="Name (optional)" 
+                value={username} 
+                onChange={(e) => setUsername(e.target.value)} 
+                className="username-input"
+              />
               <textarea
                 placeholder="Write your reply..."
                 value={replyComment}
@@ -477,6 +547,7 @@ export default function Home() {
           <h2>Create new thread</h2>
           <form onSubmit={handleCreateThread}>
             <div className="form-row">
+              <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} />
               <input type="text" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
             </div>
             <textarea placeholder="Comment" value={comment} onChange={(e) => setComment(e.target.value)} required />
@@ -525,6 +596,7 @@ export default function Home() {
             </div>
             <form onSubmit={handleCreateThread}>
               <div className="form-row">
+                <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} />
                 <input type="text" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
               </div>
               <textarea placeholder="Comment" value={comment} onChange={(e) => setComment(e.target.value)} required />

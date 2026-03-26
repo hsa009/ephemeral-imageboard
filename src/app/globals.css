@@ -512,3 +512,83 @@ header h1 span {
   max-width: 100%;
   max-height: 400px;
 }
+
+.reply-action-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.reply-action-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.reply-indicator {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: var(--accent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cancel-reply {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 4px;
+}
+
+.cancel-reply:hover {
+  color: var(--danger);
+}
+
+.username-input {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.username-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.username-display {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.quote-box {
+  background: var(--bg-tertiary);
+  border-left: 2px solid var(--border);
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.reply-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.reply-footer .reactions {
+  margin-top: 0;
+}
