@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "0null",
+  title: "Imageboard",
   description: "Ephemeral text and image board",
   icons: {
     icon: "/favicon.svg",

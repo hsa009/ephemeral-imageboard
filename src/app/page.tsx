@@ -344,10 +344,10 @@ export default function Home() {
     return (
       <div className="container">
         <header>
-          <h1><span>0null</span>_</h1>
+          <h1><span>IB</span></h1>
           <nav className="nav-links">
             <button onClick={() => setGalleryMode(!galleryMode)} className="btn-secondary" style={{ padding: "8px 16px" }}>
-              {galleryMode ? "📝 Text Mode" : "🖼️ Gallery"}
+              {galleryMode ? "Text Mode" : "Gallery"}
             </button>
             <a href="#" onClick={() => setSelectedThread(null)}>← Catalog</a>
           </nav>
@@ -502,17 +502,11 @@ export default function Home() {
       </div>
 
       {loading && (
-        <div className="loading">
-          <span className="loading-text">[ SYSTEM BOOT_</span>
-          <span className="loading-cursor">]</span>
-        </div>
+        <div className="loading">Loading...</div>
       )}
 
       {!loading && threads.length === 0 && (
-        <div className="loading">
-          <span className="loading-text">[ NO DATA ]</span>
-          <p style={{ marginTop: '20px', color: 'var(--text-secondary)' }}>Be the first to post.</p>
-        </div>
+        <div className="loading">No threads yet. Be the first to post!</div>
       )}
 
       <button className="fab" onClick={() => { setShowCreateForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}>

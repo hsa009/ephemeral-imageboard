@@ -10,21 +10,18 @@
   --bg-tertiary: #262626;
   --text-primary: #e5e5e5;
   --text-secondary: #a3a3a3;
-  --accent: #00ff00;
-  --accent-dim: #00cc00;
-  --accent-glow: rgba(0, 255, 0, 0.3);
-  --border: #333333;
-  --border-bright: #00ff00;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --border: #404040;
   --danger: #ef4444;
   --success: #22c55e;
-  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
 }
 
 html, body {
   min-height: 100vh;
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
 }
 
@@ -435,28 +432,17 @@ header h1 span {
 .loading {
   text-align: center;
   padding: 40px;
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 1rem;
-  letter-spacing: 2px;
-}
-
-.loading-text {
-  text-shadow: 0 0 10px var(--accent-glow);
-}
-
-.loading-cursor {
-  animation: blink 1s step-end infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  color: var(--text-secondary);
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+.loading::after {
+  content: '...';
+  animation: pulse 1s infinite;
 }
 
 .reactions {

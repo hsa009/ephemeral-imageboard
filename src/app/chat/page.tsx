@@ -284,8 +284,8 @@ export default function Chat() {
           >
             ←
           </button>
-          <h1 style={{ fontSize: "1.2rem", margin: 0 }}>
-            <span style={{ color: "#ff4444" }}>🔗</span> Ghost Chat
+            <h1 style={{ fontSize: "1.2rem", margin: 0 }}>
+            Ghost Chat
           </h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
