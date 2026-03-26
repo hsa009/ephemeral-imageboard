@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { s3Client, getBucketName } from '@/lib/s3';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { hashIP, getClientIP } from '@/lib/ip-hash';
 
 const POW_DIFFICULTY = '0000';
 const POW_MAX_AGE = 60000;
@@ -16,12 +17,6 @@ function verifyPoW(nonce: string, timestamp: number): boolean {
   if (!hash || !hash.startsWith(POW_DIFFICULTY)) return false;
   
   return true;
-}
-
-function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return request.headers.get('cf-connecting-ip') || 'anonymous';
 }
 
 export async function POST(request: NextRequest) {
@@ -54,11 +49,11 @@ export async function POST(request: NextRequest) {
     if (image && image.size > 0) {
       const arrayBuffer = await image.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', arrayBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+      const imgHashBuffer = await globalThis.crypto.subtle.digest('SHA-256', arrayBuffer);
+      const imgHashArray = Array.from(new Uint8Array(imgHashBuffer));
+      const imgHash = imgHashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
       const ext = image.name.split('.').pop() || 'webp';
-      imageFilename = `${hash}.${ext}`;
+      imageFilename = `${imgHash}.${ext}`;
 
       const command = new PutObjectCommand({
         Bucket: getBucketName(),
@@ -70,9 +65,8 @@ export async function POST(request: NextRequest) {
       await s3Client.send(command);
     }
 
-    const clientIP = getClientIP(request);
-    const ipHash = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(clientIP));
-    const hashedIP = Array.from(new Uint8Array(ipHash)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+    const rawIP = getClientIP(request);
+    const author_ip = await hashIP(rawIP);
 
     const { data, error } = await supabaseAdmin
       .from('threads')
@@ -80,7 +74,7 @@ export async function POST(request: NextRequest) {
         subject: sanitizedSubject,
         comment: sanitizedComment,
         image_filename: imageFilename,
-        author_ip: hashedIP,
+        author_ip,
       })
       .select()
       .single();
