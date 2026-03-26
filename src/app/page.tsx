@@ -131,7 +131,7 @@ export default function Home() {
   const [previewPost, setPreviewPost] = useState<{ x: number; y: number; content: string } | null>(null);
   const [pendingReplies, setPendingReplies] = useState<{ id: string; comment: string; image_filename: string | null }[]>([]);
   const [currentPoW, setCurrentPoW] = useState<{ nonce: string; timestamp: number } | null>(null);
-  const [imagesMode, setImagesMode] = useState(false);
+  const [imagesMode, setImagesMode] = useState(true);
 
   useEffect(() => {
     fetchThreads();
@@ -347,7 +347,7 @@ export default function Home() {
           <h1><span>0null</span></h1>
           <nav className="nav-links">
             <button onClick={() => setImagesMode(!imagesMode)} className="btn-secondary" style={{ padding: "8px 16px" }}>
-              {imagesMode ? "Thread" : "Images"}
+              {imagesMode ? "Images" : "Thread"}
             </button>
             <a href="#" onClick={() => setSelectedThread(null)}>← Catalog</a>
           </nav>
