@@ -1,16 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-if (typeof (globalThis as any).DOMParser === 'undefined') {
-  (globalThis as any).DOMParser = class {
-    parseFromString(markup: string) {
-      return {
-        documentElement: markup,
-        getElementsByTagName: () => [],
-        querySelector: () => null,
-      };
-    }
-  };
-}
-/* eslint-enable @typescript-eslint/no-explicit-any */
+import './polyfill';
 
 import { S3Client } from '@aws-sdk/client-s3';
 
