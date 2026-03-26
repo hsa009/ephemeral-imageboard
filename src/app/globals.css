@@ -592,3 +592,44 @@ header h1 span {
 .reply-footer .reactions {
   margin-top: 0;
 }
+
+.you-badge {
+  background: #f59e0b;
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-right: 8px;
+}
+
+.reply.highlighted {
+  border: 1px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.reply.is-new {
+  animation: flash 1s ease-out;
+}
+
+@keyframes flash {
+  0% { background: rgba(59, 130, 246, 0.3); }
+  100% { background: transparent; }
+}
+
+.collapse-toggle {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-top: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+.collapse-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

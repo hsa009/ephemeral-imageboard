@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 interface Thread {
   id: number;
@@ -62,7 +62,6 @@ function saveReaction(type: string, id: number, emoji: string) {
   }
 }
 
-// Local identity storage for thread/reply IDs
 const POSTS_STORAGE_KEY = "0null_posts";
 
 function getMyPosts(): number[] {
@@ -167,13 +166,11 @@ export default function Home() {
   const [imagesMode, setImagesMode] = useState(true);
   const [username, setUsername] = useState("");
   const [replyingTo, setReplyingTo] = useState<{ id: number; comment: string } | null>(null);
+  const [collapsedReplies, setCollapsedReplies] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     fetchThreads();
-    
-    const handleScroll = () => {
-      setShowFab(window.scrollY > 300);
-    };
+    const handleScroll = () => setShowFab(window.scrollY > 300);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -193,109 +190,55 @@ export default function Home() {
     import("@supabase/supabase-js").then(({ createClient }) => {
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
       const channel = supabase.channel(`thread-${threadId}`);
-      
       channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "replies", filter: `thread_id=eq.${threadId}` }, (payload: unknown) => {
         const newReply = payload as { new: Reply };
         setReplies((prev) => [...prev, { ...newReply.new, isNew: true }]);
-        setTimeout(() => {
-          setReplies((prev) => prev.map((r) => r.id === newReply.new.id ? { ...r, isNew: false } : r));
-        }, 3000);
+        setTimeout(() => setReplies((prev) => prev.map((r) => r.id === newReply.new.id ? { ...r, isNew: false } : r)), 3000);
       });
-      
       channel.subscribe();
     });
   };
 
   const addReaction = async (type: string, id: number, emoji: string) => {
     if (hasReacted(type, id, emoji)) return;
-
     if (type === "thread") {
-      setThreads(prev => prev.map(t => {
-        if (t.id === id) {
-          const reactions = { ...t.reactions };
-          reactions[emoji] = (reactions[emoji] || 0) + 1;
-          return { ...t, reactions };
-        }
-        return t;
-      }));
-      if (selectedThread?.id === id) {
-        setSelectedThread(prev => prev ? { ...prev, reactions: { ...prev.reactions, [emoji]: (prev.reactions?.[emoji] || 0) + 1 } } : null);
-      }
+      setThreads(prev => prev.map(t => t.id === id ? { ...t, reactions: { ...t.reactions, [emoji]: (t.reactions?.[emoji] || 0) + 1 } } : t));
+      if (selectedThread?.id === id) setSelectedThread(prev => prev ? { ...prev, reactions: { ...prev.reactions, [emoji]: (prev.reactions?.[emoji] || 0) + 1 } } : null);
     } else {
-      setReplies(prev => prev.map(r => {
-        if (r.id === id) {
-          const reactions = { ...r.reactions };
-          reactions[emoji] = (reactions[emoji] || 0) + 1;
-          return { ...r, reactions };
-        }
-        return r;
-      }));
+      setReplies(prev => prev.map(r => r.id === id ? { ...r, reactions: { ...r.reactions, [emoji]: (r.reactions?.[emoji] || 0) + 1 } } : r));
     }
-
     saveReaction(type, id, emoji);
-
     try {
-      await fetch("/api/react", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, id, emoji }),
-      });
-    } catch (e) {
-      console.error("Failed to add reaction:", e);
-    }
+      await fetch("/api/react", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, id, emoji }) });
+    } catch (e) { console.error("Failed to add reaction:", e); }
   };
 
-  useEffect(() => {
-    generatePoW().then(setCurrentPoW);
-  }, []);
+  useEffect(() => { generatePoW().then(setCurrentPoW); }, []);
 
   const fetchThreads = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/thread/list");
-      if (res.ok) {
-        const data = await res.json();
-        setThreads(data.threads || []);
-      }
-    } catch (e) {
-      console.error("Failed to fetch threads:", e);
-    } finally {
-      setLoading(false);
-    }
+      if (res.ok) { const data = await res.json(); setThreads(data.threads || []); }
+    } catch (e) { console.error("Failed to fetch threads:", e); }
+    finally { setLoading(false); }
   };
 
   const fetchReplies = async (threadId: number) => {
     try {
       const res = await fetch(`/api/thread/${threadId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setReplies(data.replies || []);
-      }
-    } catch (e) {
-      console.error("Failed to fetch replies:", e);
-    }
+      if (res.ok) { const data = await res.json(); setReplies(data.replies || []); }
+    } catch (e) { console.error("Failed to fetch replies:", e); }
   };
 
   const handleCreateThread = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPoW) return;
-    
     setLoading(true);
     setPowLoading(true);
-
     const { valid, error } = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
-    if (!valid) {
-      alert(`Verification failed: ${error}. Generating new challenge...`);
-      setLoading(false);
-      setPowLoading(false);
-      const newPoW = await generatePoW();
-      setCurrentPoW(newPoW);
-      return;
-    }
-
-    const pendingId = `pending-${Date.now()}`;
-    setPendingReplies([...pendingReplies, { id: pendingId, comment, image_filename: null }]);
-
+    if (!valid) { alert(`Verification failed: ${error}. Generating new challenge...`); setLoading(false); setPowLoading(false); const newPoW = await generatePoW(); setCurrentPoW(newPoW); return; }
+    setPendingReplies([...pendingReplies, { id: `pending-${Date.now()}`, comment, image_filename: null }]);
     try {
       const formData = new FormData();
       formData.append("subject", subject);
@@ -304,27 +247,16 @@ export default function Home() {
       formData.append("pow_timestamp", currentPoW.timestamp.toString());
       if (username) formData.append("username", username);
       if (imageFile) formData.append("image", imageFile);
-
       const res = await fetch("/api/thread/create", { method: "POST", body: formData });
-
       if (res.ok) {
-        setSubject("");
-        setComment("");
-        setImageFile(null);
-        setShowCreateForm(false);
+        setSubject(""); setComment(""); setImageFile(null); setShowCreateForm(false);
         const data = await res.json();
         if (data.thread?.id) saveMyPost(data.thread.id);
         fetchThreads();
-        const newPoW = await generatePoW();
-        setCurrentPoW(newPoW);
+        setCurrentPoW(await generatePoW());
       }
-    } catch (e) {
-      console.error("Failed to create thread:", e);
-    } finally {
-      setLoading(false);
-      setPowLoading(false);
-      setPendingReplies((prev) => prev.filter((r) => r.id !== pendingId));
-    }
+    } catch (e) { console.error("Failed to create thread:", e); }
+    finally { setLoading(false); setPowLoading(false); setPendingReplies(prev => prev.filter(r => r.id !== pendingReplies[pendingReplies.length - 1]?.id)); }
   };
 
   const handleReply = async (e: React.FormEvent) => {
@@ -332,19 +264,9 @@ export default function Home() {
     if (!selectedThread || !currentPoW) return;
     setLoading(true);
     setPowLoading(true);
-
     const { valid, error } = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
-    if (!valid) {
-      alert(`Verification failed: ${error}. Generating new challenge...`);
-      setLoading(false);
-      setPowLoading(false);
-      const newPoW = await generatePoW();
-      setCurrentPoW(newPoW);
-      return;
-    }
-
+    if (!valid) { alert(`Verification failed: ${error}. Generating new challenge...`); setLoading(false); setPowLoading(false); setCurrentPoW(await generatePoW()); return; }
     setPendingReplies([...pendingReplies, { id: `pending-${Date.now()}`, comment: replyComment, image_filename: null }]);
-
     try {
       const formData = new FormData();
       formData.append("comment", replyComment);
@@ -353,31 +275,68 @@ export default function Home() {
       if (username) formData.append("username", username);
       if (replyingTo) formData.append("reply_to_id", replyingTo.id.toString());
       if (replyImage) formData.append("image", replyImage);
-
       const res = await fetch(`/api/thread/${selectedThread.id}/reply`, { method: "POST", body: formData });
-
       if (res.ok) {
         const data = await res.json();
         if (data.reply?.id) saveMyPost(data.reply.id);
-        setReplyComment("");
-        setReplyImage(null);
-        setReplyingTo(null);
-        fetchReplies(selectedThread.id);
-        fetchThreads();
-        const newPoW = await generatePoW();
-        setCurrentPoW(newPoW);
+        setReplyComment(""); setReplyImage(null); setReplyingTo(null);
+        fetchReplies(selectedThread.id); fetchThreads();
+        setCurrentPoW(await generatePoW());
       }
-    } catch (e) {
-      console.error("Failed to reply:", e);
-    } finally {
-      setLoading(false);
-      setPowLoading(false);
-      setPendingReplies((prev) => prev.filter((r) => r.id !== `pending-${Date.now()}`));
-    }
+    } catch (e) { console.error("Failed to reply:", e); }
+    finally { setLoading(false); setPowLoading(false); setPendingReplies(prev => prev.filter(r => r.id !== `pending-${Date.now()}`)); }
   };
 
-  const formatQuote = (text: string) => {
-    return text.replace(/>(\d+)/g, '<span class="quote-ref">>>$1</span>');
+  const formatQuote = (text: string) => text.replace(/>(\d+)/g, '<span class="quote-ref">>>$1</span>');
+
+  const toggleCollapse = (replyId: number) => setCollapsedReplies(prev => ({ ...prev, [replyId]: !prev[replyId] }));
+
+  const replyTree = useMemo(() => {
+    const roots: (Reply & { children: Reply[] })[] = [];
+    const childrenMap: Record<number, (Reply & { children: Reply[] })[]> = {};
+    replies.forEach(r => { childrenMap[r.id] = []; });
+    replies.forEach(r => {
+      const node = { ...r, children: [] as Reply[] };
+      if (r.reply_to_id && childrenMap[r.reply_to_id]) {
+        childrenMap[r.reply_to_id].push(node);
+      } else {
+        roots.push(node);
+      }
+    });
+    roots.forEach(root => { root.children = childrenMap[root.id] || []; });
+    return roots;
+  }, [replies]);
+
+  const renderReplyTree = (nodes: (Reply & { children: Reply[] })[], depth = 0) => {
+    return nodes.map(reply => {
+      const isCollapsed = collapsedReplies[reply.id];
+      const childCount = reply.children?.length || 0;
+      const showCollapse = depth === 0 && childCount >= 5;
+      const myPost = isMyPost(reply.id);
+      
+      return (
+        <div key={reply.id} className={`reply ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`} style={{ marginLeft: depth > 0 ? '20px' : 0, borderLeft: depth > 0 ? '2px solid var(--accent)' : 'none' }}>
+          <div className="reply-header">
+            {myPost && <span className="you-badge">You</span>}
+            {reply.username && reply.username !== 'Anonymous' && <span className="username-display">{reply.username} • </span>}
+            <span>#{reply.id}</span>
+            <span>{new Date(reply.created_at).toLocaleString()}</span>
+          </div>
+          {reply.reply_to_id && <div className="quote-box">In reply to #{reply.reply_to_id}</div>}
+          <div className="reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
+          {reply.image_filename && <img src={reply.image_filename} alt="" className={`reply-image ${expandedImage === reply.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)} />}
+          <div className="reply-footer">
+            <div className="reactions">
+              {EMOJI_LIST.map(emoji => <button key={emoji} className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`} onClick={() => addReaction("reply", reply.id, emoji)} disabled={hasReacted('reply', reply.id, emoji)}><span className="reaction-emoji">{emoji}</span><span className="reaction-count">{reply.reactions?.[emoji] || ""}</span></button>)}
+            </div>
+            <button className="reply-action-btn" onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>Reply</button>
+          </div>
+          {showCollapse && !isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Hide {childCount - 3} more replies</button>}
+          {showCollapse && isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Show {childCount} replies</button>}
+          {!showCollapse && reply.children?.length > 0 && !isCollapsed && renderReplyTree(reply.children as (Reply & { children: Reply[] })[], depth + 1)}
+        </div>
+      );
+    });
   };
 
   if (selectedThread) {
@@ -386,25 +345,14 @@ export default function Home() {
         <header>
           <h1><span>0null</span></h1>
           <nav className="nav-links">
-            <button onClick={() => setImagesMode(!imagesMode)} className="btn-secondary" style={{ padding: "8px 16px" }}>
-              {imagesMode ? "Images" : "Thread"}
-            </button>
+            <button onClick={() => setImagesMode(!imagesMode)} className="btn-secondary" style={{ padding: "8px 16px" }}>{imagesMode ? "Images" : "Thread"}</button>
             <a href="#" onClick={() => setSelectedThread(null)}>← Catalog</a>
           </nav>
         </header>
-
         <div className={`thread-view ${imagesMode ? 'images-mode' : ''}`}>
           <div className="thread-op">
             <div className="thread-op-header">
-              {selectedThread.image_filename && (
-                <img
-                  src={selectedThread.image_filename}
-                  alt=""
-                  className={`thread-op-image ${expandedImage === selectedThread.image_filename ? "expanded" : ""}`}
-                  loading="lazy"
-                  onClick={() => setExpandedImage(expandedImage === selectedThread.image_filename ? null : selectedThread.image_filename)}
-                />
-              )}
+              {selectedThread.image_filename && <img src={selectedThread.image_filename} alt="" className={`thread-op-image ${expandedImage === selectedThread.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === selectedThread.image_filename ? null : selectedThread.image_filename)} />}
               <div className="thread-op-content">
                 <div className="thread-op-subject">{selectedThread.subject}</div>
                 <div className="thread-op-comment" dangerouslySetInnerHTML={{ __html: formatQuote(selectedThread.comment) }} />
@@ -412,122 +360,29 @@ export default function Home() {
             </div>
             <div className="thread-op-footer">
               <div className="thread-meta">
-                {selectedThread.username && selectedThread.username !== 'Anonymous' && (
-                  <span className="username-display">{selectedThread.username} • </span>
-                )}
+                {selectedThread.username && selectedThread.username !== 'Anonymous' && <span className="username-display">{selectedThread.username} • </span>}
                 Posted {new Date(selectedThread.created_at).toLocaleString()}
               </div>
               <div className="reactions">
-                {EMOJI_LIST.map((emoji) => (
-                  <button
-                    key={emoji}
-                    className={`reaction-btn ${hasReacted('thread', selectedThread.id, emoji) ? 'reacted' : ''}`}
-                    onClick={() => addReaction("thread", selectedThread.id, emoji)}
-                    disabled={hasReacted('thread', selectedThread.id, emoji)}
-                  >
-                    <span className="reaction-emoji">{emoji}</span>
-                    <span className="reaction-count">{selectedThread.reactions?.[emoji] || ""}</span>
-                  </button>
-                ))}
+                {EMOJI_LIST.map(emoji => <button key={emoji} className={`reaction-btn ${hasReacted('thread', selectedThread.id, emoji) ? 'reacted' : ''}`} onClick={() => addReaction("thread", selectedThread.id, emoji)} disabled={hasReacted('thread', selectedThread.id, emoji)}><span className="reaction-emoji">{emoji}</span><span className="reaction-count">{selectedThread.reactions?.[emoji] || ""}</span></button>)}
               </div>
             </div>
           </div>
-
-          {replies.map((reply) => (
-            <div key={reply.id} className="reply">
-              <div className="reply-header">
-                {reply.username && reply.username !== 'Anonymous' && (
-                  <span className="username-display">{reply.username} • </span>
-                )}
-                <span>#{reply.id}</span>
-                <span>{new Date(reply.created_at).toLocaleString()}</span>
-              </div>
-              {reply.reply_to_id && (
-                <div className="quote-box">
-                  In reply to #{reply.reply_to_id}
-                </div>
-              )}
-              <div className="reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
-              {reply.image_filename && (
-                <img
-                  src={reply.image_filename}
-                  alt=""
-                  className={`reply-image ${expandedImage === reply.image_filename ? "expanded" : ""}`}
-                  loading="lazy"
-                  onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)}
-                />
-              )}
-              <div className="reply-footer">
-                <div className="reactions">
-                  {EMOJI_LIST.map((emoji) => (
-                    <button
-                      key={emoji}
-                      className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`}
-                      onClick={() => addReaction("reply", reply.id, emoji)}
-                      disabled={hasReacted('reply', reply.id, emoji)}
-                    >
-                      <span className="reaction-emoji">{emoji}</span>
-                      <span className="reaction-count">{reply.reactions?.[emoji] || ""}</span>
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="reply-action-btn"
-                  onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}
-                >
-                  Reply
-                </button>
-              </div>
-            </div>
-          ))}
-
-          {pendingReplies.map((reply) => (
-            <div key={reply.id} className="reply pending">
-              <div className="reply-header"><span>Posting...</span></div>
-              <div className="reply-content">{reply.comment}</div>
-            </div>
-          ))}
-
+          {renderReplyTree(replyTree)}
+          {pendingReplies.map(reply => <div key={reply.id} className="reply pending"><div className="reply-header"><span>Posting...</span></div><div className="reply-content">{reply.comment}</div></div>)}
           <div className="reply-form">
-            {replyingTo && (
-              <div className="reply-indicator">
-                Replying to #{replyingTo.id} 
-                <button onClick={() => setReplyingTo(null)} className="cancel-reply">X</button>
-              </div>
-            )}
+            {replyingTo && <div className="reply-indicator">Replying to #{replyingTo.id} <button onClick={() => setReplyingTo(null)} className="cancel-reply">X</button></div>}
             <form onSubmit={handleReply}>
-              <input 
-                type="text" 
-                placeholder="Name (optional)" 
-                value={username} 
-                onChange={(e) => setUsername(e.target.value)} 
-                className="username-input"
-              />
-              <textarea
-                placeholder="Write your reply..."
-                value={replyComment}
-                onChange={(e) => setReplyComment(e.target.value)}
-                required
-              />
+              <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} className="username-input" />
+              <textarea placeholder="Write your reply..." value={replyComment} onChange={(e) => setReplyComment(e.target.value)} required />
               <div className="form-actions">
-                <div className="file-input">
-                  <label>
-                    <input type="file" accept="image/*" onChange={(e) => setReplyImage(e.target.files?.[0] || null)} />
-                  </label>
-                </div>
-                <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>
-                  {powLoading ? "Verifying..." : loading ? "Posting..." : "Reply"}
-                </button>
+                <div className="file-input"><label><input type="file" accept="image/*" onChange={(e) => setReplyImage(e.target.files?.[0] || null)} /></label></div>
+                <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>{powLoading ? "Verifying..." : loading ? "Posting..." : "Reply"}</button>
               </div>
             </form>
           </div>
         </div>
-
-        {previewPost && (
-          <div className="thread-preview visible" style={{ left: previewPost.x, top: previewPost.y }}>
-            {previewPost.content}
-          </div>
-        )}
+        {previewPost && <div className="thread-preview visible" style={{ left: previewPost.x, top: previewPost.y }}>{previewPost.content}</div>}
       </div>
     );
   }
@@ -541,7 +396,6 @@ export default function Home() {
           <a href="#" onClick={() => setShowCreateForm(!showCreateForm)}>New Thread</a>
         </nav>
       </header>
-
       {showCreateForm && (
         <div className="create-form">
           <h2>Create new thread</h2>
@@ -552,48 +406,22 @@ export default function Home() {
             </div>
             <textarea placeholder="Comment" value={comment} onChange={(e) => setComment(e.target.value)} required />
             <div className="form-actions">
-              <div className="file-input">
-                <label><input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /></label>
-              </div>
-              <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>
-                {powLoading ? "Computing PoW..." : loading ? "Posting..." : "Create Thread"}
-              </button>
+              <div className="file-input"><label><input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /></label></div>
+              <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>{powLoading ? "Computing PoW..." : loading ? "Posting..." : "Create Thread"}</button>
             </div>
           </form>
         </div>
       )}
-
       <div className="catalog">
-        {threads.map((thread) => (
-          <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread)}>
-            {thread.image_filename && <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />}
-            <div className="thread-info">
-              <div className="thread-subject">{thread.subject}</div>
-              <div className="thread-meta">{thread.bump_count} replies • {new Date(thread.last_bumped_at).toLocaleTimeString()}</div>
-            </div>
-          </div>
-        ))}
+        {threads.map(thread => <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread)}>{thread.image_filename && <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />}<div className="thread-info"><div className="thread-subject">{thread.subject}</div><div className="thread-meta">{thread.bump_count} replies • {new Date(thread.last_bumped_at).toLocaleTimeString()}</div></div></div>)}
       </div>
-
-      {loading && (
-        <div className="loading">Loading...</div>
-      )}
-
-      {!loading && threads.length === 0 && (
-        <div className="loading">No threads yet. Be the first to post!</div>
-      )}
-
-      <button className="fab" onClick={() => { setShowCreateForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-        <PlusIcon />
-      </button>
-
+      {loading && <div className="loading">Loading...</div>}
+      {!loading && threads.length === 0 && <div className="loading">No threads yet. Be the first to post!</div>}
+      <button className="fab" onClick={() => { setShowCreateForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><PlusIcon /></button>
       {showCreateForm && (
         <div className="modal visible" onClick={() => setShowCreateForm(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Create Thread</h2>
-              <button className="modal-close" onClick={() => setShowCreateForm(false)}><CloseIcon /></button>
-            </div>
+            <div className="modal-header"><h2>Create Thread</h2><button className="modal-close" onClick={() => setShowCreateForm(false)}><CloseIcon /></button></div>
             <form onSubmit={handleCreateThread}>
               <div className="form-row">
                 <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} />
@@ -601,12 +429,8 @@ export default function Home() {
               </div>
               <textarea placeholder="Comment" value={comment} onChange={(e) => setComment(e.target.value)} required />
               <div className="form-actions">
-                <div className="file-input">
-                  <label><input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /></label>
-                </div>
-                <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>
-                  {powLoading ? "Computing PoW..." : loading ? "Posting..." : "Create"}
-                </button>
+                <div className="file-input"><label><input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /></label></div>
+                <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>{powLoading ? "Computing PoW..." : loading ? "Posting..." : "Create"}</button>
               </div>
             </form>
           </div>
