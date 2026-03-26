@@ -2,7 +2,7 @@ import './polyfill';
 
 import { S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 
 const endpoint = (process.env.IDRIVE_E2_ENDPOINT || '').replace(/\/$/, '');
 const region = process.env.IDRIVE_E2_REGION || '';
@@ -75,7 +75,6 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
 }
 
 // Get signed URL for reading (for thread list)
-import { GetObjectCommand } from '@aws-sdk/client-s3';
 
 export async function getReadSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
   if (!s3Client || !isConfigured) {
