@@ -1,6 +1,6 @@
 import './polyfill';
 
-const endpoint = process.env.IDRIVE_E2_ENDPOINT || '';
+const endpoint = (process.env.IDRIVE_E2_ENDPOINT || '').replace(/\/$/, '');
 const region = process.env.IDRIVE_E2_REGION || '';
 const accessKey = process.env.IDRIVE_E2_ACCESS_KEY || '';
 const secretKey = process.env.IDRIVE_E2_SECRET_KEY || '';
@@ -17,17 +17,24 @@ export const getBucketName = () => bucket;
 // Dummy client for health checks
 export const s3Client = { send: () => Promise.resolve({}) } as unknown as { send: (cmd: unknown) => Promise<unknown> };
 
+function getHost(): string {
+  // IDrive e2 uses path-style: bucket.endpoint
+  return `${bucket}.${endpoint.replace(/^https?:\/\//, '')}`;
+}
+
 // Direct fetch API for S3 operations (bypasses AWS SDK XML parsing issues)
 export async function uploadDirect(key: string, body: Uint8Array, contentType: string): Promise<void> {
   if (!isConfigured) {
     throw new Error('S3 not configured');
   }
 
-  const date = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  // URL-encode the key to handle special characters
+  const encodedKey = encodeURIComponent(key).replace(/%2F/g, '/');
+  const date = new Date().toUTCString().replace(/[-:]/g, '').replace(/\.\d{3}/, 'Z');
   const dateStamp = date.slice(0, 8);
   
-  const host = `${bucket}.${new URL(endpoint).host}`;
-  const path = `/${key}`;
+  const host = getHost();
+  const path = `/${encodedKey}`;
   
   const headers: Record<string, string> = {
     'Content-Type': contentType,
@@ -37,10 +44,13 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
     'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
   };
 
-  const canonicalHeaders = Object.entries(headers).sort(([a], [b]) => a.localeCompare(b))
+  // Sort headers alphabetically
+  const sortedHeaders = Object.entries(headers).sort(([a], [b]) => a.localeCompare(b));
+  const canonicalHeaders = sortedHeaders
     .map(([k, v]) => `${k.toLowerCase()}:${v}`).join('\n') + '\n';
-  const signedHeaders = Object.keys(headers).map(k => k.toLowerCase()).sort().join(';');
+  const signedHeaders = sortedHeaders.map(([k]) => k.toLowerCase()).join(';');
   
+  // Create canonical request (AWS Signature V4)
   const canonicalRequest = [
     'PUT',
     path,
@@ -50,11 +60,17 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
     'UNSIGNED-PAYLOAD',
   ].join('\n');
 
+  console.log('Upload signing:', { host, path, date, dateStamp });
+
   const signature = await signRequest(canonicalRequest, accessKey, secretKey, dateStamp, region);
   
   headers['Authorization'] = `AWS4-HMAC-SHA256 Credential=${accessKey}/${dateStamp}/${region}/s3/aws4_request, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
-  const response = await fetch(`${endpoint}/${bucket}${path}`, {
+  const uploadUrl = `${endpoint}/${bucket}${path}`;
+  console.log('Upload URL:', uploadUrl);
+  console.log('Auth header:', headers['Authorization']?.slice(0, 50) + '...');
+
+  const response = await fetch(uploadUrl, {
     method: 'PUT',
     headers,
     body: body as BodyInit,
@@ -62,6 +78,7 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
 
   if (!response.ok) {
     const text = await response.text();
+    console.error('Upload failed:', response.status, text);
     throw new Error(`Upload failed: ${response.status} - ${text}`);
   }
 }
@@ -71,15 +88,17 @@ export async function getSignedUrl(key: string, expiresIn: number = 3600): Promi
     throw new Error('S3 not configured');
   }
 
-  const date = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const encodedKey = encodeURIComponent(key).replace(/%2F/g, '/');
+  const date = new Date().toUTCString().replace(/[-:]/g, '').replace(/\.\d{3}/, 'Z');
   const dateStamp = date.slice(0, 8);
   
-  const host = `${bucket}.${new URL(endpoint).host}`;
-  const path = `/${key}`;
+  const host = getHost();
+  const path = `/${encodedKey}`;
+  const expiry = Math.floor(Date.now() / 1000) + expiresIn;
 
   const queryParams = [
     `X-Amz-Algorithm=AWS4-HMAC-SHA256`,
-    `X-Amz-Credential=${accessKey}%2F${dateStamp}%2F${region}%2Fs3%2Faws4_request`,
+    `X-Amz-Credential=${encodeURIComponent(accessKey)}/${dateStamp}/${region}/s3/aws4_request`,
     `X-Amz-Date=${date}`,
     `X-Amz-Expires=${expiresIn}`,
     `X-Amz-SignedHeaders=host`,
@@ -93,9 +112,10 @@ export async function getSignedUrl(key: string, expiresIn: number = 3600): Promi
     'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
   };
 
-  const canonicalHeaders = Object.entries(headers).sort(([a], [b]) => a.localeCompare(b))
+  const sortedHeaders = Object.entries(headers).sort(([a], [b]) => a.localeCompare(b));
+  const canonicalHeaders = sortedHeaders
     .map(([k, v]) => `${k.toLowerCase()}:${v}`).join('\n') + '\n';
-  const signedHeaders = Object.keys(headers).map(k => k.toLowerCase()).sort().join(';');
+  const signedHeaders = sortedHeaders.map(([k]) => k.toLowerCase()).join(';');
   
   const canonicalRequest = [
     'GET',
@@ -124,6 +144,7 @@ async function signRequest(payload: string, ak: string, sk: string, ds: string, 
     canonicalHashHex,
   ].join('\n');
 
+  // Calculate signature step by step
   const kDate = await hmacSHA256(encoder.encode(`AWS4${sk}`), ds);
   const kRegion = await hmacSHA256(kDate, rv);
   const kService = await hmacSHA256(kRegion, 's3');
