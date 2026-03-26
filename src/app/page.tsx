@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 interface Thread {
   id: number;
   subject: string;
+  username?: string;
   comment: string;
   image_filename: string | null;
   created_at: string;
@@ -22,6 +23,8 @@ interface Reply {
   created_at: string;
   reactions: Record<string, number>;
   isNew?: boolean;
+  username?: string;
+  reply_to_id?: number | null;
 }
 
 const EMOJI_LIST = ["👍", "👎", "😂", "😢", "😮", "🔥", "💀", "🎉"];

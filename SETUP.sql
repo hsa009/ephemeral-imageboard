@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS threads (
   comment TEXT NOT NULL,
   image_filename TEXT,
   author_ip TEXT,
+  username TEXT DEFAULT 'Anonymous',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   last_bumped_at TIMESTAMPTZ DEFAULT NOW(),
   bump_count INTEGER DEFAULT 0,
@@ -21,6 +22,8 @@ CREATE TABLE IF NOT EXISTS replies (
   comment TEXT NOT NULL,
   image_filename TEXT,
   author_ip TEXT,
+  username TEXT DEFAULT 'Anonymous',
+  reply_to_id INTEGER REFERENCES replies(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   reactions JSONB DEFAULT '{}'
 );
@@ -36,6 +39,7 @@ CREATE TABLE IF NOT EXISTS bans (
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_threads_bumped ON threads(last_bumped_at DESC);
 CREATE INDEX IF NOT EXISTS idx_replies_thread ON replies(thread_id);
+CREATE INDEX IF NOT EXISTS idx_replies_reply_to ON replies(reply_to_id);
 
 -- Enable realtime for replies (for live updates)
 ALTER PUBLICATION supabase_realtime ADD TABLE replies;

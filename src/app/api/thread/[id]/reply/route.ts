@@ -37,6 +37,8 @@ export async function POST(
     const image = formData.get('image') as File | null;
     const powNonce = formData.get('pow_nonce') as string;
     const powTimestamp = parseInt(formData.get('pow_timestamp') as string);
+    const username = (formData.get('username') as string) || 'Anonymous';
+    const replyToId = formData.get('reply_to_id') ? parseInt(formData.get('reply_to_id') as string) : null;
 
     if (!comment) {
       return NextResponse.json({ error: 'Comment required' }, { status: 400 });
@@ -106,6 +108,8 @@ export async function POST(
         comment: sanitizedComment,
         image_filename: imageFilename,
         author_ip,
+        username,
+        reply_to_id: replyToId,
       })
       .select()
       .single();

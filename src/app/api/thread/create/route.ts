@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     const image = formData.get('image') as File | null;
     const powNonce = formData.get('pow_nonce') as string;
     const powTimestamp = parseInt(formData.get('pow_timestamp') as string);
+    const username = (formData.get('username') as string) || 'Anonymous';
 
     if (!subject || !comment) {
       return NextResponse.json({ error: 'Subject and comment required' }, { status: 400 });
@@ -46,22 +47,13 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await image.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         
-        // Calculate hash for filename
         const imgHashBuffer = await globalThis.crypto.subtle.digest('SHA-256', arrayBuffer);
         const imgHashArray = Array.from(new Uint8Array(imgHashBuffer));
         const imgHash = imgHashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
         
-        // Get proper content type, default to image/png
         const contentType = image.type || 'image/png';
         const ext = image.name.split('.').pop() || contentType.split('/')[1] || 'png';
         imageFilename = `${imgHash}.${ext}`;
-
-        console.log('Image upload:', { 
-          filename: imageFilename, 
-          size: uint8Array.length, 
-          contentType,
-          imageType: image.type 
-        });
 
         await uploadDirect(imageFilename, uint8Array, contentType);
       } catch (imgErr) {
@@ -96,6 +88,7 @@ export async function POST(request: NextRequest) {
         subject: sanitizedSubject,
         comment: sanitizedComment,
         image_filename: imageFilename,
+        username: username,
         author_ip,
       })
       .select()
