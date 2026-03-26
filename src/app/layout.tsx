@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Imageboard",
+  title: "0null",
   description: "Ephemeral text and image board",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

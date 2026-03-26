@@ -92,7 +92,7 @@ export default function Home() {
   const [replyComment, setReplyComment] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [replyImage, setReplyImage] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [powLoading, setPowLoading] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [previewPost, setPreviewPost] = useState<{ x: number; y: number; content: string } | null>(null);
@@ -155,6 +155,7 @@ export default function Home() {
   }, []);
 
   const fetchThreads = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/thread/list");
       if (res.ok) {
@@ -163,6 +164,8 @@ export default function Home() {
       }
     } catch (e) {
       console.error("Failed to fetch threads:", e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -278,7 +281,7 @@ export default function Home() {
     return (
       <div className="container">
         <header>
-          <h1><span>IB</span></h1>
+          <h1><span>0null</span>_</h1>
           <nav className="nav-links">
             <button onClick={() => setGalleryMode(!galleryMode)} className="btn-secondary" style={{ padding: "8px 16px" }}>
               {galleryMode ? "📝 Text Mode" : "🖼️ Gallery"}
@@ -431,7 +434,19 @@ export default function Home() {
         ))}
       </div>
 
-      {threads.length === 0 && !loading && <div className="loading">No threads yet. Be the first to post!</div>}
+      {loading && (
+        <div className="loading">
+          <span className="loading-text">[ SYSTEM BOOT_</span>
+          <span className="loading-cursor">]</span>
+        </div>
+      )}
+
+      {!loading && threads.length === 0 && (
+        <div className="loading">
+          <span className="loading-text">[ NO DATA ]</span>
+          <p style={{ marginTop: '20px', color: 'var(--text-secondary)' }}>Be the first to post.</p>
+        </div>
+      )}
 
       <button className="fab" onClick={() => { setShowCreateForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
         <PlusIcon />
