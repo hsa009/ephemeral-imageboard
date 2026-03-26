@@ -7,22 +7,30 @@ import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 export async function GET(_request: NextRequest) {
-  if (!supabaseAdmin || !s3Client) {
-    return NextResponse.json({ 
-      error: 'Service not configured', 
-      details: { 
-        supabaseAdmin: !!supabaseAdmin, 
-        s3Client: !!s3Client,
-        envCheck: { 
+  try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({
+        service: 'Supabase_Connection',
+        error: 'Supabase client not initialized',
+        envCheck: {
           SUPABASE_URL: !!process.env.SUPABASE_URL,
           SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-          IDRIVE_E2_ENDPOINT: !!process.env.IDRIVE_E2_ENDPOINT
         }
-      }
-    }, { status: 500 });
-  }
+      }, { status: 500 });
+    }
 
-  try {
+    if (!s3Client) {
+      return NextResponse.json({
+        service: 'IDrive_S3_Client',
+        error: 'S3 client not initialized',
+        envCheck: {
+          IDRIVE_E2_ENDPOINT: !!process.env.IDRIVE_E2_ENDPOINT,
+          IDRIVE_E2_REGION: !!process.env.IDRIVE_E2_REGION,
+          IDRIVE_E2_BUCKET: !!process.env.IDRIVE_E2_BUCKET,
+        }
+      }, { status: 500 });
+    }
+
     const { data: threads, error } = await supabaseAdmin
       .from('threads')
       .select('*')
@@ -31,11 +39,11 @@ export async function GET(_request: NextRequest) {
 
     if (error) {
       console.error('Supabase error:', error);
-      return NextResponse.json({ 
-        success: false, 
-        error: error.message, 
-        details: error,
-        code: error.code 
+      return NextResponse.json({
+        service: 'Supabase_Query',
+        error: error.message,
+        errorCode: error.code,
+        details: error
       }, { status: 500 });
     }
 
@@ -62,10 +70,10 @@ export async function GET(_request: NextRequest) {
   } catch (error) {
     console.error('Error fetching threads:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ 
-      success: false, 
-      error: errorMessage, 
-      details: String(error) 
+    return NextResponse.json({
+      service: 'Unknown',
+      error: errorMessage,
+      details: String(error)
     }, { status: 500 });
   }
 }
