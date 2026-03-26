@@ -89,10 +89,12 @@ export async function GET() {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 10);
     
-    if (process.env.IP_SALT) {
+    const hasCustomSalt = (process.env.IP_SALT || '').trim().length > 0;
+    
+    if (hasCustomSalt) {
       results.services.hashing = { 
         status: 'PASS', 
-        details: { hasCustomSalt: true, testHash: hash } 
+        details: { hasCustomSalt: true, testHash: hash, saltLength: (process.env.IP_SALT || '').trim().length } 
       };
     } else {
       results.services.hashing = { 

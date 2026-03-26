@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 
 export async function hashIP(ip: string): Promise<string> {
-  const salt = process.env.IP_SALT || 'default_salt_change_me';
+  const salt = (process.env.IP_SALT || 'default_salt_change_me').trim();
   const combined = `${ip}:${salt}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(combined);
