@@ -45,13 +45,25 @@ export async function POST(request: NextRequest) {
       try {
         const arrayBuffer = await image.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // Calculate hash for filename
         const imgHashBuffer = await globalThis.crypto.subtle.digest('SHA-256', arrayBuffer);
         const imgHashArray = Array.from(new Uint8Array(imgHashBuffer));
         const imgHash = imgHashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
-        const ext = image.name.split('.').pop() || 'webp';
+        
+        // Get proper content type, default to image/png
+        const contentType = image.type || 'image/png';
+        const ext = image.name.split('.').pop() || contentType.split('/')[1] || 'png';
         imageFilename = `${imgHash}.${ext}`;
 
-        await uploadDirect(imageFilename, uint8Array, image.type);
+        console.log('Image upload:', { 
+          filename: imageFilename, 
+          size: uint8Array.length, 
+          contentType,
+          imageType: image.type 
+        });
+
+        await uploadDirect(imageFilename, uint8Array, contentType);
       } catch (imgErr) {
         return NextResponse.json({
           service: 'IDrive_S3_Upload',
