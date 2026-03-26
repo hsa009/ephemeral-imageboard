@@ -18,11 +18,11 @@ export const getBucketName = () => bucket;
 export const s3Client = { send: () => Promise.resolve({}) } as unknown as { send: (cmd: unknown) => Promise<unknown> };
 
 function getHost(): string {
-  return `${bucket}.${endpoint.replace(/^https?:\/\//, '')}`;
+  const cleanEndpoint = endpoint.replace(/^https?:\/\//, '');
+  return `${bucket}.${cleanEndpoint}`;
 }
 
 function formatDate(date: Date): string {
-  // ISO8601 Basic Format: YYYYMMDDTHHmmssZ
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
   const day = String(date.getUTCDate()).padStart(2, '0');
@@ -33,39 +33,43 @@ function formatDate(date: Date): string {
 }
 
 function formatDateStamp(dateStr: string): string {
-  // YYYYMMDD
   return dateStr.slice(0, 8);
 }
 
-// Direct fetch API for S3 operations using presigned URL approach
+// Direct fetch API for S3 operations
 export async function uploadDirect(key: string, body: Uint8Array, contentType: string): Promise<void> {
   if (!isConfigured) {
     throw new Error('S3 not configured');
   }
 
+  // Ensure body is a proper Uint8Array
+  const bodyBytes = body instanceof Uint8Array ? body : new Uint8Array(body);
+  
   const now = new Date();
   const amzDate = formatDate(now);
   const dateStamp = formatDateStamp(amzDate);
   
   const host = getHost();
+  // Use raw key without URL encoding in path (S3 handles this)
   const path = `/${key}`;
   
-  console.log('S3 Upload Debug:', { endpoint, bucket, host, key: key.slice(0, 20), amzDate, dateStamp });
+  console.log('S3 Upload:', { endpoint, bucket, host, key, bodyLength: bodyBytes.length, amzDate, dateStamp, region });
   
   const headers: Record<string, string> = {
     'Content-Type': contentType,
-    'Content-Length': body.length.toString(),
+    'Content-Length': bodyBytes.length.toString(),
     'Host': host,
     'x-amz-date': amzDate,
     'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
   };
 
-  // Sort headers alphabetically
+  // Sort headers alphabetically (required for AWS signature)
   const sortedHeaders = Object.entries(headers).sort(([a], [b]) => a.localeCompare(b));
   const canonicalHeaders = sortedHeaders
     .map(([k, v]) => `${k.toLowerCase()}:${v}`).join('\n') + '\n';
-  const signedHeaders = sortedHeaders.map(([k]) => k.toLowerCase()).join(';');
+  const signedHeaders = sortedHeaders.map(([k]) => k.toLowerCase()).sort().join(';');
   
+  // Canonical request must match exactly what AWS expects
   const canonicalRequest = [
     'PUT',
     path,
@@ -75,16 +79,19 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
     'UNSIGNED-PAYLOAD',
   ].join('\n');
 
+  console.log('Canonical Request:', canonicalRequest.slice(0, 200));
+
   const signature = await signRequest(canonicalRequest, accessKey, secretKey, dateStamp, region);
   
   headers['Authorization'] = `AWS4-HMAC-SHA256 Credential=${accessKey}/${dateStamp}/${region}/s3/aws4_request, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
   const uploadUrl = `${endpoint}/${bucket}${path}`;
+  console.log('Auth:', headers['Authorization']?.slice(0, 60) + '...');
 
   const response = await fetch(uploadUrl, {
     method: 'PUT',
     headers,
-    body: body as BodyInit,
+    body: bodyBytes as unknown as BodyInit,
   });
 
   if (!response.ok) {
@@ -92,6 +99,8 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
     console.error('Upload failed:', response.status, text);
     throw new Error(`Upload failed: ${response.status} - ${text}`);
   }
+  
+  console.log('Upload success!');
 }
 
 export async function getSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
@@ -113,8 +122,7 @@ export async function getSignedUrl(key: string, expiresIn: number = 3600): Promi
     `X-Amz-Date=${amzDate}`,
     `X-Amz-Expires=${expiresIn}`,
     `X-Amz-SignedHeaders=host`,
-  ].sort()
-    .join('&');
+  ].sort().join('&');
 
   const fullPath = `${path}?${queryParams}`;
   
@@ -146,9 +154,11 @@ export async function getSignedUrl(key: string, expiresIn: number = 3600): Promi
 async function signRequest(payload: string, ak: string, sk: string, ds: string, rv: string): Promise<string> {
   const encoder = new TextEncoder();
   
+  // Step 1: Hash the canonical request
   const canonicalHash = await crypto.subtle.digest('SHA-256', encoder.encode(payload));
   const canonicalHashHex = Array.from(new Uint8Array(canonicalHash)).map(b => b.toString(16).padStart(2, '0')).join('');
 
+  // Step 2: String to sign
   const stringToSign = [
     'AWS4-HMAC-SHA256',
     ds,
@@ -156,11 +166,13 @@ async function signRequest(payload: string, ak: string, sk: string, ds: string, 
     canonicalHashHex,
   ].join('\n');
 
-  // Calculate signature step by step
+  // Step 3: Calculate signing key
   const kDate = await hmacSHA256(encoder.encode(`AWS4${sk}`), ds);
   const kRegion = await hmacSHA256(kDate, rv);
   const kService = await hmacSHA256(kRegion, 's3');
   const kSigning = await hmacSHA256(kService, 'aws4_request');
+  
+  // Step 4: Calculate signature
   const signature = await hmacSHA256(kSigning, stringToSign);
 
   return Array.from(signature).map(b => b.toString(16).padStart(2, '0')).join('');
