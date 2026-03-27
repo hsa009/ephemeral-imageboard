@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { uploadDirect } from '@/lib/s3';
 import { hashIP } from '@/lib/ip-hash';
-import { verifyPoW } from '@/lib/pow';
+import { verifyPoW, getClientIP } from '@/lib/pow';
 
 const BUMP_LIMIT = 10;
 
@@ -14,14 +14,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('[Reply-Create] Starting...');
+    
     if (!supabaseAdmin) {
+      console.error('[Reply-Create] Supabase not initialized');
       return NextResponse.json({
         service: 'Supabase_Connection',
         error: 'Supabase client not initialized',
-        envCheck: {
-          SUPABASE_URL: !!process.env.SUPABASE_URL,
-          SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        }
       }, { status: 500 });
     }
 
@@ -33,24 +32,36 @@ export async function POST(
     }
 
     const formData = await request.formData();
-    const comment = formData.get('comment') as string;
+    const comment = (formData.get('comment') as string)?.trim();
     const image = formData.get('image') as File | null;
-    const powNonce = formData.get('pow_nonce') as string;
+    const powNonce = (formData.get('pow_nonce') as string)?.trim();
     const powTimestamp = parseInt(formData.get('pow_timestamp') as string);
-    const username = (formData.get('username') as string) || 'Anonymous';
+    const username = (formData.get('username') as string)?.trim() || 'Anonymous';
     const replyToId = formData.get('reply_to_id') ? parseInt(formData.get('reply_to_id') as string) : null;
+
+    console.log('[Reply-Create] Received:', { 
+      threadId, 
+      commentLength: comment?.length,
+      hasPoW: !!powNonce,
+      replyToId,
+      username: username !== 'Anonymous' ? username : '(anonymous)'
+    });
 
     if (!comment) {
       return NextResponse.json({ error: 'Comment required' }, { status: 400 });
     }
 
+    // Verify PoW
     const powResult = verifyPoW(powNonce, powTimestamp);
     if (!powResult.valid) {
+      console.error('[Reply-Create] PoW failed:', powResult.error, powResult.message);
       return NextResponse.json({ error: powResult.message || 'Invalid proof of work', code: powResult.error }, { status: 403 });
     }
+    console.log('[Reply-Create] PoW verified!');
 
     const sanitizedComment = comment.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+    // Check thread exists and not locked
     const { data: thread, error: threadError } = await supabaseAdmin
       .from('threads')
       .select('*')
@@ -58,10 +69,10 @@ export async function POST(
       .single();
 
     if (threadError || !thread) {
+      console.error('[Reply-Create] Thread not found:', threadError);
       return NextResponse.json({
         service: 'Supabase_Thread_Lookup',
         error: threadError?.message || 'Thread not found',
-        errorCode: threadError?.code
       }, { status: 404 });
     }
 
@@ -69,10 +80,11 @@ export async function POST(
       return NextResponse.json({ error: 'Thread is locked' }, { status: 403 });
     }
 
+    // Handle image
     let imageFilename = null;
-
     if (image && image.size > 0) {
       try {
+        console.log('[Reply-Create] Uploading image:', image.size);
         const arrayBuffer = await image.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         const imgHashBuffer = await globalThis.crypto.subtle.digest('SHA-256', arrayBuffer);
@@ -82,7 +94,9 @@ export async function POST(
         imageFilename = `${imgHash}.${ext}`;
 
         await uploadDirect(imageFilename, uint8Array, image.type);
+        console.log('[Reply-Create] Image uploaded:', imageFilename);
       } catch (imgErr) {
+        console.error('[Reply-Create] Image upload failed:', imgErr);
         return NextResponse.json({
           service: 'IDrive_S3_Upload',
           error: imgErr instanceof Error ? imgErr.message : 'Upload failed',
@@ -90,17 +104,23 @@ export async function POST(
       }
     }
 
+    // Hash IP
     let author_ip = 'anonymous';
     try {
       const rawIP = getClientIP(request);
+      console.log('[Reply-Create] Client IP:', rawIP);
       author_ip = await hashIP(rawIP);
+      console.log('[Reply-Create] IP hashed:', author_ip);
     } catch (hashErr) {
+      console.error('[Reply-Create] IP hash failed:', hashErr);
       return NextResponse.json({
         service: 'IP_Hashing',
         error: hashErr instanceof Error ? hashErr.message : 'Hash failed',
       }, { status: 500 });
     }
 
+    // Insert reply
+    console.log('[Reply-Create] Inserting reply...');
     const { data: reply, error: replyError } = await supabaseAdmin
       .from('replies')
       .insert({
@@ -115,15 +135,15 @@ export async function POST(
       .single();
 
     if (replyError) {
+      console.error('[Reply-Create] Supabase error:', replyError);
       return NextResponse.json({
         service: 'Supabase_Insert',
         error: replyError.message,
-        errorCode: replyError.code
       }, { status: 500 });
     }
 
+    // Bump thread if under limit
     const shouldBump = thread.bump_count < BUMP_LIMIT;
-
     if (shouldBump) {
       await supabaseAdmin
         .from('threads')
@@ -134,20 +154,15 @@ export async function POST(
         .eq('id', threadId);
     }
 
+    console.log('[Reply-Create] Success! Reply ID:', reply.id);
     return NextResponse.json({ success: true, reply });
+    
   } catch (error) {
-    console.error('Error creating reply:', error);
+    console.error('[Reply-Create] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({
       service: 'Unknown',
       error: errorMessage,
-      details: String(error)
     }, { status: 500 });
   }
-}
-
-function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return request.headers.get('cf-connecting-ip') || '127.0.0.1';
 }
