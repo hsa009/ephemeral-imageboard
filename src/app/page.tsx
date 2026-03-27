@@ -62,6 +62,20 @@ function saveReaction(type: string, id: number, emoji: string) {
   }
 }
 
+function removeReaction(type: string, id: number, emoji: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const key = `${type}_${id}`;
+    const reacted = getReactedIds();
+    if (reacted[key]) {
+      reacted[key] = reacted[key].filter(e => e !== emoji);
+      localStorage.setItem(REACTION_STORAGE_KEY, JSON.stringify(reacted));
+    }
+  } catch (e) {
+    console.error("Failed to remove reaction:", e);
+  }
+}
+
 const POSTS_STORAGE_KEY = "0null_posts";
 
 function getMyPosts(): number[] {
@@ -199,18 +213,64 @@ export default function Home() {
     });
   };
 
+  // Reaction toggle with optimistic updates
   const addReaction = async (type: string, id: number, emoji: string) => {
-    if (hasReacted(type, id, emoji)) return;
+    const isAlreadyReacted = hasReacted(type, id, emoji);
+    
+    // Optimistic UI: update immediately
+    const updateReactions = (items: (Thread | Reply)[], targetId: number): (Thread | Reply)[] => {
+      return items.map(item => {
+        if (item.id === targetId) {
+          const currentCount = (item.reactions?.[emoji] as number) || 0;
+          const newCount = isAlreadyReacted ? Math.max(0, currentCount - 1) : currentCount + 1;
+          return { ...item, reactions: { ...item.reactions, [emoji]: newCount } };
+        }
+        return item;
+      });
+    };
+
     if (type === "thread") {
-      setThreads(prev => prev.map(t => t.id === id ? { ...t, reactions: { ...t.reactions, [emoji]: (t.reactions?.[emoji] || 0) + 1 } } : t));
-      if (selectedThread?.id === id) setSelectedThread(prev => prev ? { ...prev, reactions: { ...prev.reactions, [emoji]: (prev.reactions?.[emoji] || 0) + 1 } } : null);
+      setThreads(prev => updateReactions(prev, id) as Thread[]);
+      if (selectedThread?.id === id) {
+        setSelectedThread(prev => prev ? updateReactions([prev], id)[0] as Thread : null);
+      }
     } else {
-      setReplies(prev => prev.map(r => r.id === id ? { ...r, reactions: { ...r.reactions, [emoji]: (r.reactions?.[emoji] || 0) + 1 } } : r));
+      setReplies(prev => updateReactions(prev, id) as Reply[]);
     }
-    saveReaction(type, id, emoji);
+
+    // Toggle localStorage
+    if (isAlreadyReacted) {
+      removeReaction(type, id, emoji);
+    } else {
+      saveReaction(type, id, emoji);
+    }
+
+    // Send API request
     try {
-      await fetch("/api/react", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, id, emoji }) });
-    } catch (e) { console.error("Failed to add reaction:", e); }
+      await fetch("/api/react", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ type, id, emoji, action: isAlreadyReacted ? 'remove' : 'add' }) 
+      });
+    } catch (e) { 
+      console.error("Failed to toggle reaction:", e);
+      // Rollback on error
+      const rollbackUpdate = (items: (Thread | Reply)[], targetId: number): (Thread | Reply)[] => {
+        return items.map(item => {
+          if (item.id === targetId) {
+            const currentCount = (item.reactions?.[emoji] as number) || 0;
+            const newCount = isAlreadyReacted ? currentCount + 1 : currentCount - 1;
+            return { ...item, reactions: { ...item.reactions, [emoji]: Math.max(0, newCount) } };
+          }
+          return item;
+        });
+      };
+      if (type === "thread") {
+        setThreads(prev => rollbackUpdate(prev, id) as Thread[]);
+      } else {
+        setReplies(prev => rollbackUpdate(prev, id) as Reply[]);
+      }
+    }
   };
 
   useEffect(() => { generatePoW().then(setCurrentPoW); }, []);
@@ -237,8 +297,15 @@ export default function Home() {
     setLoading(true);
     setPowLoading(true);
     const { valid, error } = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
-    if (!valid) { alert(`Verification failed: ${error}. Generating new challenge...`); setLoading(false); setPowLoading(false); const newPoW = await generatePoW(); setCurrentPoW(newPoW); return; }
-    setPendingReplies([...pendingReplies, { id: `pending-${Date.now()}`, comment, image_filename: null }]);
+    if (!valid) { 
+      alert(`Verification failed: ${error}. Generating new challenge...`); 
+      setLoading(false); 
+      setPowLoading(false); 
+      setCurrentPoW(await generatePoW()); 
+      return; 
+    }
+    const pendingId = `pending-${Date.now()}`;
+    setPendingReplies([...pendingReplies, { id: pendingId, comment, image_filename: null }]);
     try {
       const formData = new FormData();
       formData.append("subject", subject);
@@ -249,14 +316,26 @@ export default function Home() {
       if (imageFile) formData.append("image", imageFile);
       const res = await fetch("/api/thread/create", { method: "POST", body: formData });
       if (res.ok) {
-        setSubject(""); setComment(""); setImageFile(null); setShowCreateForm(false);
+        // Reset all form state
+        setSubject(""); 
+        setComment(""); 
+        setImageFile(null); 
+        setUsername("");
+        setShowCreateForm(false);
+        
         const data = await res.json();
         if (data.thread?.id) saveMyPost(data.thread.id);
+        
+        // Refresh data
         fetchThreads();
         setCurrentPoW(await generatePoW());
       }
     } catch (e) { console.error("Failed to create thread:", e); }
-    finally { setLoading(false); setPowLoading(false); setPendingReplies(prev => prev.filter(r => r.id !== pendingReplies[pendingReplies.length - 1]?.id)); }
+    finally { 
+      setLoading(false); 
+      setPowLoading(false); 
+      setPendingReplies(prev => prev.filter(r => r.id !== pendingId)); 
+    }
   };
 
   const handleReply = async (e: React.FormEvent) => {
@@ -265,8 +344,15 @@ export default function Home() {
     setLoading(true);
     setPowLoading(true);
     const { valid, error } = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
-    if (!valid) { alert(`Verification failed: ${error}. Generating new challenge...`); setLoading(false); setPowLoading(false); setCurrentPoW(await generatePoW()); return; }
-    setPendingReplies([...pendingReplies, { id: `pending-${Date.now()}`, comment: replyComment, image_filename: null }]);
+    if (!valid) { 
+      alert(`Verification failed: ${error}. Generating new challenge...`); 
+      setLoading(false); 
+      setPowLoading(false); 
+      setCurrentPoW(await generatePoW()); 
+      return; 
+    }
+    const pendingId = `pending-${Date.now()}`;
+    setPendingReplies([...pendingReplies, { id: pendingId, comment: replyComment, image_filename: null }]);
     try {
       const formData = new FormData();
       formData.append("comment", replyComment);
@@ -277,18 +363,28 @@ export default function Home() {
       if (replyImage) formData.append("image", replyImage);
       const res = await fetch(`/api/thread/${selectedThread.id}/reply`, { method: "POST", body: formData });
       if (res.ok) {
+        // Reset all form state
+        setReplyComment(""); 
+        setReplyImage(null); 
+        setReplyingTo(null);
+        
         const data = await res.json();
         if (data.reply?.id) saveMyPost(data.reply.id);
-        setReplyComment(""); setReplyImage(null); setReplyingTo(null);
-        fetchReplies(selectedThread.id); fetchThreads();
+        
+        // Refresh data
+        fetchReplies(selectedThread.id); 
+        fetchThreads();
         setCurrentPoW(await generatePoW());
       }
     } catch (e) { console.error("Failed to reply:", e); }
-    finally { setLoading(false); setPowLoading(false); setPendingReplies(prev => prev.filter(r => r.id !== `pending-${Date.now()}`)); }
+    finally { 
+      setLoading(false); 
+      setPowLoading(false); 
+      setPendingReplies(prev => prev.filter(r => r.id !== pendingId)); 
+    }
   };
 
   const formatQuote = (text: string) => text.replace(/>(\d+)/g, '<span class="quote-ref">>>$1</span>');
-
   const toggleCollapse = (replyId: number) => setCollapsedReplies(prev => ({ ...prev, [replyId]: !prev[replyId] }));
 
   const replyTree = useMemo(() => {
@@ -327,7 +423,16 @@ export default function Home() {
           {reply.image_filename && <img src={reply.image_filename} alt="" className={`reply-image ${expandedImage === reply.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)} />}
           <div className="reply-footer">
             <div className="reactions">
-              {EMOJI_LIST.map(emoji => <button key={emoji} className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`} onClick={() => addReaction("reply", reply.id, emoji)} disabled={hasReacted('reply', reply.id, emoji)}><span className="reaction-emoji">{emoji}</span><span className="reaction-count">{reply.reactions?.[emoji] || ""}</span></button>)}
+              {EMOJI_LIST.map(emoji => (
+                <button 
+                  key={emoji} 
+                  className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`} 
+                  onClick={() => addReaction("reply", reply.id, emoji)}
+                >
+                  <span className="reaction-emoji">{emoji}</span>
+                  <span className="reaction-count">{reply.reactions?.[emoji] || ""}</span>
+                </button>
+              ))}
             </div>
             <button className="reply-action-btn" onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>Reply</button>
           </div>
@@ -364,7 +469,16 @@ export default function Home() {
                 Posted {new Date(selectedThread.created_at).toLocaleString()}
               </div>
               <div className="reactions">
-                {EMOJI_LIST.map(emoji => <button key={emoji} className={`reaction-btn ${hasReacted('thread', selectedThread.id, emoji) ? 'reacted' : ''}`} onClick={() => addReaction("thread", selectedThread.id, emoji)} disabled={hasReacted('thread', selectedThread.id, emoji)}><span className="reaction-emoji">{emoji}</span><span className="reaction-count">{selectedThread.reactions?.[emoji] || ""}</span></button>)}
+                {EMOJI_LIST.map(emoji => (
+                  <button 
+                    key={emoji} 
+                    className={`reaction-btn ${hasReacted('thread', selectedThread.id, emoji) ? 'reacted' : ''}`} 
+                    onClick={() => addReaction("thread", selectedThread.id, emoji)}
+                  >
+                    <span className="reaction-emoji">{emoji}</span>
+                    <span className="reaction-count">{selectedThread.reactions?.[emoji] || ""}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -382,7 +496,6 @@ export default function Home() {
             </form>
           </div>
         </div>
-        {previewPost && <div className="thread-preview visible" style={{ left: previewPost.x, top: previewPost.y }}>{previewPost.content}</div>}
       </div>
     );
   }
