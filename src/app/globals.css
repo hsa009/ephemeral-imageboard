@@ -838,3 +838,68 @@ header h1 span {
 .mute-btn:hover {
   opacity: 1;
 }
+
+/* Inline Thread Creation */
+.inline-create {
+  margin-bottom: 24px;
+}
+
+.start-thread-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.start-thread-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-tertiary);
+}
+
+.create-form {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px;
+}
+
+.create-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.close-create-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.close-create-btn:hover {
+  color: var(--danger);
+}
+
+.create-form textarea {
+  width: 100%;
+  min-height: 100px;
+  margin-bottom: 12px;
+}
+
+/* Remove the old create-form modal styles that aren't needed anymore */
+.modal, .modal-content, .modal-header, .modal-close {
+  display: none;
+}

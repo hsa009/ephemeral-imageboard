@@ -209,7 +209,7 @@ export default function Home() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    onReply: () => replyTextareaRef.current?.focus(),
+    onReply: () => { setShowCreateForm(true); createTextareaRef.current?.focus(); },
     onViewImages: () => setViewMode('images'),
     onViewThreads: () => setViewMode('threads'),
     onCloseModal: () => {
@@ -654,7 +654,7 @@ export default function Home() {
         <h1><span>0null</span></h1>
         <nav className="nav-links">
           <a href="/chat">Chat</a>
-          <a href="#" onClick={() => setShowCreateForm(!showCreateForm)}>New Thread</a>
+          <a href="#" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); }}>New Thread</a>
         </nav>
       </header>
       {showCreateForm && (
@@ -673,30 +673,46 @@ export default function Home() {
           </form>
         </div>
       )}
-      <div className="catalog">
-        {threads.map(thread => <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread)}>{thread.image_filename && <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />}<div className="thread-info"><div className="thread-subject">{thread.subject}</div><div className="thread-meta">{thread.bump_count} replies • {new Date(thread.last_bumped_at).toLocaleTimeString()}</div></div></div>)}
-      </div>
-      {loading && <div className="loading">Loading...</div>}
-      {!loading && threads.length === 0 && <div className="loading">No threads yet. Be the first to post!</div>}
-      <button className="fab" onClick={() => { setShowCreateForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><PlusIcon /></button>
-      {showCreateForm && (
-        <div className="modal visible" onClick={() => setShowCreateForm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h2>Create Thread</h2><button className="modal-close" onClick={() => setShowCreateForm(false)}><CloseIcon /></button></div>
+      {/* Inline Thread Creation Form */}
+      <div className="inline-create">
+        {!showCreateForm ? (
+          <button className="start-thread-btn" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); }}>
+            + Start a New Thread
+          </button>
+        ) : (
+          <div className="create-form">
+            <div className="create-form-header">
+              <span>New Thread</span>
+              <button className="close-create-btn" onClick={() => setShowCreateForm(false)}>X</button>
+            </div>
             <form onSubmit={handleCreateThread}>
               <div className="form-row">
                 <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} />
                 <input type="text" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
               </div>
-              <textarea placeholder="Comment" value={comment} onChange={(e) => setComment(e.target.value)} required />
+              <textarea 
+                ref={createTextareaRef}
+                placeholder="Comment" 
+                value={comment} 
+                onChange={(e) => setComment(e.target.value)} 
+                required 
+              />
               <div className="form-actions">
                 <div className="file-input"><label><input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /></label></div>
                 <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>{powLoading ? "Computing PoW..." : loading ? "Posting..." : "Create"}</button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Thread Catalog */}
+      <div className="catalog">
+        {threads.map(thread => <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread)}>{thread.image_filename && <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />}<div className="thread-info"><div className="thread-subject">{thread.subject}</div><div className="thread-meta">{thread.bump_count} replies • {new Date(thread.last_bumped_at).toLocaleTimeString()}</div></div></div>)}
+      </div>
+      {loading && <div className="loading">Loading...</div>}
+      {!loading && threads.length === 0 && <div className="loading">No threads yet. Be the first to post!</div>}
+      <button className="fab" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><PlusIcon /></button>
     </div>
   );
 }
