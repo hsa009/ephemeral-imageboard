@@ -1,32 +1,27 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
 type ConnectionStatus = 'connecting' | 'connected' | 'error' | 'timeout';
+
+// Global channel name - MUST be same across all tabs for sync
+const GLOBAL_CHANNEL = '0null-global-presence';
 
 interface GhostState {
   status: ConnectionStatus;
   count: number;
-  showFallback: boolean;
 }
 
 export default function GhostCounter() {
   const [state, setState] = useState<GhostState>({
     status: 'connecting',
-    count: 0,
-    showFallback: false
+    count: 0
   });
   
-  const channelRef = useRef<{ unsubscribe: () => void } | null>(null);
+  const channelRef = useRef<{ unsubscribe: () => void; track: (state: object) => void } | null>(null);
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
-
-  // Stable state updater to avoid dependency issues
-  const updateState = useCallback((updates: Partial<GhostState>) => {
-    if (mountedRef.current) {
-      setState(prev => ({ ...prev, ...updates }));
-    }
-  }, []);
 
   useEffect(() => {
     // Only run on client
@@ -36,92 +31,109 @@ export default function GhostCounter() {
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.log('[GhostCounter] Missing Supabase env vars, showing fallback');
-      updateState({ status: 'error', showFallback: true, count: 1 });
+      console.log('[GHOST] Missing Supabase env vars');
+      setState({ status: 'error', count: 1 });
       return;
     }
 
     mountedRef.current = true;
+    console.log('[GHOST] Starting...');
 
-    // Timeout fallback - if not connected in 5 seconds, show fallback
+    // 15 second timeout before fallback
     timeoutRef.current = setTimeout(() => {
-      if (mountedRef.current && channelRef.current === null) {
-        console.log('[GhostCounter] Connection timeout, showing fallback');
-        updateState({ status: 'timeout', showFallback: true, count: 1 });
+      if (mountedRef.current && !channelRef.current) {
+        console.log('[GHOST] Connection timeout after 15s, showing fallback');
+        setState({ status: 'timeout', count: 1 });
       }
-    }, 5000);
+    }, 15000);
 
-    // Dynamically import Supabase (client-side only)
+    // Dynamically import Supabase
     import("@supabase/supabase-js").then(({ createClient }) => {
       if (!mountedRef.current) return;
 
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
       
-      // Create unique channel per tab
-      const channelId = `global-presence-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const channel = supabase.channel(channelId, {
-        config: { presence: { key: channelId } }
+      // Create channel with FIXED global name for cross-tab sync
+      const channel = supabase.channel(GLOBAL_CHANNEL, {
+        config: { presence: { key: `ghost-${Math.random().toString(36).substr(2, 9)}` } }
       });
 
       channelRef.current = channel;
-      console.log('[GhostCounter] Channel created:', channelId);
+      console.log('[GHOST] Channel created:', GLOBAL_CHANNEL);
 
-      // Helper to get count from presence state
+      // Helper to get count
       const getCount = () => {
         const presence = channel.presenceState();
         const keys = Object.keys(presence);
-        // Fallback: if empty, at least show 1 (self)
+        console.log('[GHOST] Presence State:', JSON.stringify(presence));
+        console.log('[GHOST] Key count:', keys.length);
         return keys.length === 0 ? 1 : keys.length;
       };
 
-      // Set up presence listeners BEFORE subscribing
-      channel.on("presence", { event: "sync" }, () => {
-        if (!mountedRef.current) return;
-        console.log('[GhostCounter] Presence sync');
-        updateState({ count: getCount() });
-      });
-
-      channel.on("presence", { event: "join" }, () => {
-        if (!mountedRef.current) return;
-        console.log('[GhostCounter] User joined');
-        updateState({ count: getCount() });
-      });
-
-      channel.on("presence", { event: "leave" }, () => {
-        if (!mountedRef.current) return;
-        console.log('[GhostCounter] User left');
-        updateState({ count: getCount() });
-      });
-
-      // Subscribe with status callback
+      // Subscribe FIRST, then attach listeners
+      // This ensures we don't miss the initial sync
       channel.subscribe((status) => {
         if (!mountedRef.current) return;
 
-        console.log('[GhostCounter] Channel status:', status);
+        console.log('[GHOST] Channel status:', status);
 
         if (status === 'SUBSCRIBED') {
-          // Clear timeout
+          console.log('[GHOST] Connected! Clearing timeout...');
+          
+          // Clear the connection timeout
           if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
           }
 
-          updateState({ status: 'connected', showFallback: false });
-          
           // Track self immediately
-          console.log('[GhostCounter] Tracking self...');
-          channel.track({ online_at: Date.now(), key: channelId });
-          
+          console.log('[GHOST] Tracking self...');
+          channel.track({ online_at: Date.now() });
+
+          // Start heartbeat every 30 seconds to keep connection warm
+          heartbeatRef.current = setInterval(() => {
+            if (channelRef.current && mountedRef.current) {
+              console.log('[GHOST] Heartbeat ping...');
+              channelRef.current.track({ online_at: Date.now() });
+            }
+          }, 30000);
+
           // Get initial count
-          updateState({ count: getCount() });
-        } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-          console.log('[GhostCounter] Channel error/closed');
-          updateState({ status: 'error', showFallback: true, count: 1 });
+          setState({ status: 'connected', count: getCount() });
+
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          console.log('[GHOST] Channel closed/error');
+          setState({ status: 'error', count: 1 });
+          
+          if (heartbeatRef.current) {
+            clearInterval(heartbeatRef.current);
+            heartbeatRef.current = null;
+          }
         }
       });
+
+      // Now attach presence listeners AFTER subscribe
+      channel.on("presence", { event: "sync" }, () => {
+        if (!mountedRef.current) return;
+        console.log('[GHOST] Presence sync received');
+        setState(prev => ({ ...prev, count: getCount() }));
+      });
+
+      channel.on("presence", { event: "join" }, (payload) => {
+        if (!mountedRef.current) return;
+        console.log('[GHOST] User joined:', payload);
+        setState(prev => ({ ...prev, count: getCount() }));
+      });
+
+      channel.on("presence", { event: "leave" }, (payload) => {
+        if (!mountedRef.current) return;
+        console.log('[GHOST] User left:', payload);
+        setState(prev => ({ ...prev, count: getCount() }));
+      });
+
     }).catch((err) => {
-      console.error('[GhostCounter] Failed to load Supabase:', err);
-      updateState({ status: 'error', showFallback: true, count: 1 });
+      console.error('[GHOST] Failed to load Supabase:', err);
+      setState({ status: 'error', count: 1 });
     });
 
     // Cleanup
@@ -132,30 +144,31 @@ export default function GhostCounter() {
         clearTimeout(timeoutRef.current);
       }
       
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+      }
+      
       if (channelRef.current) {
-        console.log('[GhostCounter] Unsubscribing channel');
+        console.log('[GHOST] Unsubscribing...');
         channelRef.current.unsubscribe();
         channelRef.current = null;
       }
     };
-  }, [updateState]);
+  }, []);
 
-  // Determine display text based on state
-  const getDisplayText = () => {
-    switch (state.status) {
-      case 'connecting':
-        return { icon: '○', count: '--', label: 'CONNECTING' };
-      case 'connected':
-        return { icon: '⚡', count: state.count.toString(), label: 'GHOSTS' };
-      case 'timeout':
-      case 'error':
-        return { icon: '⚡', count: state.count.toString(), label: 'GHOST MODE' };
-      default:
-        return { icon: '○', count: '--', label: 'GHOSTS' };
+  // Display logic
+  const getDisplay = () => {
+    if (state.status === 'connecting') {
+      return { icon: '○', count: '--', label: 'CONNECTING' };
     }
+    if (state.status === 'connected') {
+      return { icon: '⚡', count: state.count.toString(), label: 'GHOSTS' };
+    }
+    // error or timeout
+    return { icon: '⚡', count: state.count.toString(), label: 'GHOST MODE' };
   };
 
-  const display = getDisplayText();
+  const display = getDisplay();
 
   return (
     <div className="ghost-counter">
