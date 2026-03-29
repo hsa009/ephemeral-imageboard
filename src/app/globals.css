@@ -721,8 +721,9 @@ header h1 span {
 }
 
 .view-toggle-btn.active {
-  background: var(--accent);
-  color: white;
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border-bottom: 2px solid #f59e0b;
 }
 
 /* Image Gallery */
