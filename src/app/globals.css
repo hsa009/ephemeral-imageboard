@@ -673,3 +673,25 @@ header h1 span {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(0.8); }
 }
+
+
+/* Nested replies styling */
+.nested-replies {
+  margin-top: 12px;
+  padding-left: 8px;
+}
+
+.reply-thread-line {
+  height: 100%;
+}
+
+/* Ensure parent context shows in quote box */
+.quote-box {
+  background: var(--bg-tertiary);
+  border-left: 3px solid var(--accent);
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border-radius: 2px;
+}

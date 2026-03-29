@@ -388,31 +388,61 @@ export default function Home() {
   const formatQuote = (text: string) => text.replace(/>(\d+)/g, '<span class="quote-ref">>>$1</span>');
   const toggleCollapse = (replyId: number) => setCollapsedReplies(prev => ({ ...prev, [replyId]: !prev[replyId] }));
 
+  // Build nested reply tree from flat array
   const replyTree = useMemo(() => {
-    const roots: (Reply & { children: Reply[] })[] = [];
-    const childrenMap: Record<number, (Reply & { children: Reply[] })[]> = {};
-    replies.forEach(r => { childrenMap[r.id] = []; });
+    if (!replies || replies.length === 0) return [];
+    
+    // Create a map of all replies by ID
+    const replyMap = new Map<number, Reply & { children: Reply[] }>();
+    
+    // First pass: create all nodes with empty children arrays
     replies.forEach(r => {
-      const node = { ...r, children: [] as Reply[] };
-      if (r.reply_to_id && childrenMap[r.reply_to_id]) {
-        childrenMap[r.reply_to_id].push(node);
+      replyMap.set(r.id, { ...r, children: [] as (Reply & { children: Reply[] })[] });
+    });
+    
+    // Second pass: build the tree structure
+    const roots: (Reply & { children: Reply[] })[] = [];
+    
+    replies.forEach(r => {
+      const node = replyMap.get(r.id)!;
+      
+      if (r.reply_to_id && replyMap.has(r.reply_to_id)) {
+        // This is a child reply - add to parent's children
+        const parent = replyMap.get(r.reply_to_id)!;
+        parent.children.push(node);
       } else {
+        // This is a root-level reply
         roots.push(node);
       }
     });
-    roots.forEach(root => { root.children = childrenMap[root.id] || []; });
+    
     return roots;
   }, [replies]);
 
   const renderReplyTree = (nodes: (Reply & { children: Reply[] })[], depth = 0) => {
-    return nodes.map(reply => {
+    return nodes.map((reply, index) => {
       const isCollapsed = collapsedReplies[reply.id];
       const childCount = reply.children?.length || 0;
       const showCollapse = depth === 0 && childCount >= 5;
       const myPost = isMyPost(reply.id);
+      const hasChildren = reply.children && reply.children.length > 0;
+      const isLastChild = index === nodes.length - 1;
       
       return (
-        <div key={reply.id} className={`reply ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`} style={{ marginLeft: depth > 0 ? '20px' : 0, borderLeft: depth > 0 ? '2px solid var(--accent)' : 'none' }}>
+        <div key={reply.id} className={`reply ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`} style={{ 
+          marginLeft: depth > 0 ? '24px' : 0,
+          position: 'relative'
+        }}>
+          {depth > 0 && (
+            <div className="reply-thread-line" style={{
+              position: 'absolute',
+              left: '-20px',
+              top: 0,
+              bottom: isLastChild && !hasChildren ? '50%' : 0,
+              width: '2px',
+              background: 'var(--border)'
+            }} />
+          )}
           <div className="reply-header">
             {myPost && <span className="you-badge">You</span>}
             {reply.username && reply.username !== 'Anonymous' && <span className="username-display">{reply.username} • </span>}
@@ -439,7 +469,13 @@ export default function Home() {
           </div>
           {showCollapse && !isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Hide {childCount - 3} more replies</button>}
           {showCollapse && isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Show {childCount} replies</button>}
-          {!showCollapse && reply.children?.length > 0 && !isCollapsed && renderReplyTree(reply.children as (Reply & { children: Reply[] })[], depth + 1)}
+          
+          {/* Render nested children */}
+          {!showCollapse && hasChildren && !isCollapsed && (
+            <div className="nested-replies">
+              {renderReplyTree(reply.children as (Reply & { children: Reply[] })[], depth + 1)}
+            </div>
+          )}
         </div>
       );
     });
