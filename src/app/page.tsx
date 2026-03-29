@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import GhostCounter from "@/components/GhostCounter";
+import { useSound, playSuccess, playError, playGhost } from "@/hooks/useSound";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 interface Thread {
   id: number;
@@ -182,6 +184,13 @@ export default function Home() {
   const [username, setUsername] = useState("");
   const [replyingTo, setReplyingTo] = useState<{ id: number; comment: string } | null>(null);
   const [collapsedReplies, setCollapsedReplies] = useState<Record<number, boolean>>({});
+  const [muted, setMuted] = useState(false);
+  const [soundInitialized, setSoundInitialized] = useState(false);
+  const previousGhostCount = useRef<number>(0);
+  
+  // Refs for focusing inputs
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const createTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     fetchThreads();
@@ -189,6 +198,36 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Load mute state
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("0null_sound_muted");
+      setMuted(stored === "true");
+    } catch {}
+  }, []);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onReply: () => replyTextareaRef.current?.focus(),
+    onViewImages: () => setViewMode('images'),
+    onViewThreads: () => setViewMode('threads'),
+    onCloseModal: () => {
+      setShowCreateForm(false);
+      setReplyingTo(null);
+    },
+    onSubmit: () => {
+      if (selectedThread) {
+        // Trigger reply form submit
+        const form = document.querySelector('.reply-form form');
+        if (form) (form as HTMLFormElement).requestSubmit();
+      } else if (showCreateForm) {
+        // Trigger create form submit
+        const form = document.querySelector('.create-form form');
+        if (form) (form as HTMLFormElement).requestSubmit();
+      }
+    }
+  });
 
   useEffect(() => {
     if (selectedThread) {
@@ -300,6 +339,7 @@ export default function Home() {
     const { valid, error } = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
     if (!valid) { 
       alert(`Verification failed: ${error}. Generating new challenge...`); 
+      playError();
       setLoading(false); 
       setPowLoading(false); 
       setCurrentPoW(await generatePoW()); 
@@ -317,6 +357,9 @@ export default function Home() {
       if (imageFile) formData.append("image", imageFile);
       const res = await fetch("/api/thread/create", { method: "POST", body: formData });
       if (res.ok) {
+        // Play success sound
+        playSuccess();
+        
         // Reset all form state
         setSubject(""); 
         setComment(""); 
@@ -331,7 +374,10 @@ export default function Home() {
         fetchThreads();
         setCurrentPoW(await generatePoW());
       }
-    } catch (e) { console.error("Failed to create thread:", e); }
+    } catch (e) { 
+      console.error("Failed to create thread:", e);
+      playError();
+    }
     finally { 
       setLoading(false); 
       setPowLoading(false); 
@@ -347,6 +393,7 @@ export default function Home() {
     const { valid, error } = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
     if (!valid) { 
       alert(`Verification failed: ${error}. Generating new challenge...`); 
+      playError();
       setLoading(false); 
       setPowLoading(false); 
       setCurrentPoW(await generatePoW()); 
@@ -364,6 +411,8 @@ export default function Home() {
       if (replyImage) formData.append("image", replyImage);
       const res = await fetch(`/api/thread/${selectedThread.id}/reply`, { method: "POST", body: formData });
       if (res.ok) {
+        playSuccess();
+        
         // Reset all form state
         setReplyComment(""); 
         setReplyImage(null); 
@@ -377,7 +426,10 @@ export default function Home() {
         fetchThreads();
         setCurrentPoW(await generatePoW());
       }
-    } catch (e) { console.error("Failed to reply:", e); }
+    } catch (e) { 
+      console.error("Failed to reply:", e);
+      playError();
+    }
     finally { 
       setLoading(false); 
       setPowLoading(false); 
@@ -486,7 +538,24 @@ export default function Home() {
       <div className="container">
         <header>
           <h1><span>0null</span></h1>
-          <GhostCounter />
+          <GhostCounter onCountChange={(newCount, prevCount) => {
+            // Only play ghost sound if count increased AND it wasn't the first load (0 -> 1)
+            if (newCount > prevCount && prevCount > 0) {
+              playGhost();
+            }
+            previousGhostCount.current = newCount;
+          }} />
+          <button 
+            className="mute-btn" 
+            onClick={() => {
+              const newMuted = !muted;
+              setMuted(newMuted);
+              try { localStorage.setItem("0null_sound_muted", newMuted ? "true" : "false"); } catch {}
+            }}
+            title={muted ? "Unmute sounds" : "Mute sounds"}
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
           <nav className="nav-links">
             <div className="view-toggle">
               <button 
