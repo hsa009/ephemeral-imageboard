@@ -44,7 +44,7 @@ header h1 {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.5px;
-  font-family: var(--font-mono);
+  font-family: monospace;
 }
 
 header h1 span {
@@ -464,7 +464,7 @@ header h1 span {
   cursor: pointer;
   border-radius: 2px;
   transition: all 0.15s ease;
-  font-family: var(--font-mono);
+  font-family: monospace;
 }
 
 .reaction-btn:hover:not(:disabled) {
@@ -632,4 +632,44 @@ header h1 span {
 .collapse-toggle:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* Ghost Counter */
+.ghost-counter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: #3b82f6;
+}
+
+.ghost-icon {
+  font-size: 0.9rem;
+}
+
+.ghost-count {
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+.ghost-label {
+  color: var(--text-secondary);
+}
+
+.ghost-pulse {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: ghost-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes ghost-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
 }

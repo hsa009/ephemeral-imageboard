@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import GhostCounter from "@/components/GhostCounter";
 
 interface Thread {
   id: number;
@@ -449,6 +450,7 @@ export default function Home() {
       <div className="container">
         <header>
           <h1><span>0null</span></h1>
+          <GhostCounter />
           <nav className="nav-links">
             <button onClick={() => setImagesMode(!imagesMode)} className="btn-secondary" style={{ padding: "8px 16px" }}>{imagesMode ? "Images" : "Thread"}</button>
             <a href="#" onClick={() => setSelectedThread(null)}>← Catalog</a>
