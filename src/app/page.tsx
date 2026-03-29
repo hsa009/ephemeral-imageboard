@@ -178,7 +178,7 @@ export default function Home() {
   const [previewPost, setPreviewPost] = useState<{ x: number; y: number; content: string } | null>(null);
   const [pendingReplies, setPendingReplies] = useState<{ id: string; comment: string; image_filename: string | null }[]>([]);
   const [currentPoW, setCurrentPoW] = useState<{ nonce: string; timestamp: number } | null>(null);
-  const [imagesMode, setImagesMode] = useState(true);
+  const [viewMode, setViewMode] = useState<'threads' | 'images'>('threads');
   const [username, setUsername] = useState("");
   const [replyingTo, setReplyingTo] = useState<{ id: number; comment: string } | null>(null);
   const [collapsedReplies, setCollapsedReplies] = useState<Record<number, boolean>>({});
@@ -488,52 +488,93 @@ export default function Home() {
           <h1><span>0null</span></h1>
           <GhostCounter />
           <nav className="nav-links">
-            <button onClick={() => setImagesMode(!imagesMode)} className="btn-secondary" style={{ padding: "8px 16px" }}>{imagesMode ? "Images" : "Thread"}</button>
+            <div className="view-toggle">
+              <button 
+                onClick={() => setViewMode('threads')} 
+                className={`view-toggle-btn ${viewMode === 'threads' ? 'active' : ''}`}
+              >Thread</button>
+              <button 
+                onClick={() => setViewMode('images')} 
+                className={`view-toggle-btn ${viewMode === 'images' ? 'active' : ''}`}
+              >Images</button>
+            </div>
             <a href="#" onClick={() => setSelectedThread(null)}>← Catalog</a>
           </nav>
         </header>
-        <div className={`thread-view ${imagesMode ? 'images-mode' : ''}`}>
-          <div className="thread-op">
-            <div className="thread-op-header">
-              {selectedThread.image_filename && <img src={selectedThread.image_filename} alt="" className={`thread-op-image ${expandedImage === selectedThread.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === selectedThread.image_filename ? null : selectedThread.image_filename)} />}
-              <div className="thread-op-content">
-                <div className="thread-op-subject">{selectedThread.subject}</div>
-                <div className="thread-op-comment" dangerouslySetInnerHTML={{ __html: formatQuote(selectedThread.comment) }} />
+        {/* Thread View */}
+        {viewMode === 'threads' && (
+          <div className="thread-view">
+            <div className="thread-op">
+              <div className="thread-op-header">
+                {selectedThread.image_filename && <img src={selectedThread.image_filename} alt="" className={`thread-op-image ${expandedImage === selectedThread.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === selectedThread.image_filename ? null : selectedThread.image_filename)} />}
+                <div className="thread-op-content">
+                  <div className="thread-op-subject">{selectedThread.subject}</div>
+                  <div className="thread-op-comment" dangerouslySetInnerHTML={{ __html: formatQuote(selectedThread.comment) }} />
+                </div>
+              </div>
+              <div className="thread-op-footer">
+                <div className="thread-meta">
+                  {selectedThread.username && selectedThread.username !== 'Anonymous' && <span className="username-display">{selectedThread.username} • </span>}
+                  Posted {new Date(selectedThread.created_at).toLocaleString()}
+                </div>
+                <div className="reactions">
+                  {EMOJI_LIST.map(emoji => (
+                    <button 
+                      key={emoji} 
+                      className={`reaction-btn ${hasReacted('thread', selectedThread.id, emoji) ? 'reacted' : ''}`} 
+                      onClick={() => addReaction("thread", selectedThread.id, emoji)}
+                    >
+                      <span className="reaction-emoji">{emoji}</span>
+                      <span className="reaction-count">{selectedThread.reactions?.[emoji] || ""}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="thread-op-footer">
-              <div className="thread-meta">
-                {selectedThread.username && selectedThread.username !== 'Anonymous' && <span className="username-display">{selectedThread.username} • </span>}
-                Posted {new Date(selectedThread.created_at).toLocaleString()}
-              </div>
-              <div className="reactions">
-                {EMOJI_LIST.map(emoji => (
-                  <button 
-                    key={emoji} 
-                    className={`reaction-btn ${hasReacted('thread', selectedThread.id, emoji) ? 'reacted' : ''}`} 
-                    onClick={() => addReaction("thread", selectedThread.id, emoji)}
-                  >
-                    <span className="reaction-emoji">{emoji}</span>
-                    <span className="reaction-count">{selectedThread.reactions?.[emoji] || ""}</span>
-                  </button>
-                ))}
-              </div>
+            {renderReplyTree(replyTree)}
+            {pendingReplies.map(reply => <div key={reply.id} className="reply pending"><div className="reply-header"><span>Posting...</span></div><div className="reply-content">{reply.comment}</div></div>)}
+            <div className="reply-form">
+              {replyingTo && <div className="reply-indicator">Replying to #{replyingTo.id} <button onClick={() => setReplyingTo(null)} className="cancel-reply">X</button></div>}
+              <form onSubmit={handleReply}>
+                <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} className="username-input" />
+                <textarea placeholder="Write your reply..." value={replyComment} onChange={(e) => setReplyComment(e.target.value)} required />
+                <div className="form-actions">
+                  <div className="file-input"><label><input type="file" accept="image/*" onChange={(e) => setReplyImage(e.target.files?.[0] || null)} /></label></div>
+                  <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>{powLoading ? "Verifying..." : loading ? "Posting..." : "Reply"}</button>
+                </div>
+              </form>
             </div>
           </div>
-          {renderReplyTree(replyTree)}
-          {pendingReplies.map(reply => <div key={reply.id} className="reply pending"><div className="reply-header"><span>Posting...</span></div><div className="reply-content">{reply.comment}</div></div>)}
-          <div className="reply-form">
-            {replyingTo && <div className="reply-indicator">Replying to #{replyingTo.id} <button onClick={() => setReplyingTo(null)} className="cancel-reply">X</button></div>}
-            <form onSubmit={handleReply}>
-              <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} className="username-input" />
-              <textarea placeholder="Write your reply..." value={replyComment} onChange={(e) => setReplyComment(e.target.value)} required />
-              <div className="form-actions">
-                <div className="file-input"><label><input type="file" accept="image/*" onChange={(e) => setReplyImage(e.target.files?.[0] || null)} /></label></div>
-                <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>{powLoading ? "Verifying..." : loading ? "Posting..." : "Reply"}</button>
+        )}
+
+        {/* Images Gallery View */}
+        {viewMode === 'images' && (
+          <div className="image-gallery">
+            {/* Thread OP image */}
+            {selectedThread.image_filename && (
+              <div className="gallery-item" onClick={() => setViewMode('threads')}>
+                <img src={selectedThread.image_filename} alt="" className="gallery-image" loading="lazy" />
+                <div className="gallery-overlay">
+                  <span className="gallery-post-id">#{selectedThread.id}</span>
+                  <span className="gallery-post-type">OP</span>
+                </div>
               </div>
-            </form>
+            )}
+            {/* Reply images */}
+            {replies.filter(r => r.image_filename).map(reply => (
+              <div key={reply.id} className="gallery-item" onClick={() => setViewMode('threads')}>
+                <img src={reply.image_filename!} alt="" className="gallery-image" loading="lazy" />
+                <div className="gallery-overlay">
+                  <span className="gallery-post-id">#{reply.id}</span>
+                  {reply.comment && <span className="gallery-preview">{reply.comment.slice(0, 40)}...</span>}
+                </div>
+              </div>
+            ))}
+            {selectedThread.image_filename === null && replies.filter(r => r.image_filename).length === 0 && (
+              <div className="gallery-empty">No images in this thread</div>
+            )}
           </div>
-        </div>
+        )}
       </div>
     );
   }
