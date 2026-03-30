@@ -38,6 +38,19 @@ CREATE TABLE IF NOT EXISTS bans (
   expires_at TIMESTAMPTZ
 );
 
+-- Create presence table for ghost counter polling
+CREATE TABLE IF NOT EXISTS presence (
+  id SERIAL PRIMARY KEY,
+  ghost_id TEXT UNIQUE NOT NULL,
+  last_seen_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create index for efficient counting
+CREATE INDEX IF NOT EXISTS idx_presence_last_seen ON presence(last_seen_at DESC);
+
+-- Allow public access
+ALTER TABLE presence DISABLE ROW LEVEL SECURITY;
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_threads_bumped ON threads(last_bumped_at DESC);
 CREATE INDEX IF NOT EXISTS idx_threads_niche ON threads(niche);

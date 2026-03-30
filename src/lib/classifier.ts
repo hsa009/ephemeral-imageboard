@@ -6,7 +6,7 @@ const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
 export async function classifyNiche(subject: string, comment: string): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    console.log('[GHOST BRAIN] No API key, defaulting to random');
+    console.log("[GHOST BRAIN] No API key, defaulting to random");
     return 'random';
   }
 
@@ -19,12 +19,13 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
     console.log("[GHOST BRAIN] Attempting connection to OpenRouter...");
     console.log("[GHOST BRAIN] Payload Sent:", { subject, comment });
 
+    // @ts-ignore - reasoning may not be in types
     const response = await client.chat.completions.create({
       model: 'arcee-ai/trinity-mini:free',
       messages: [
         {
           role: 'system',
-          content: "You are a classification engine. Context: Users like 'Trump', 'Hitler', 'Biden', 'Elections', or 'War' MUST be categorized as 'politics'. Do not be neutral. If it involves a historical or current political leader, the answer is 'politics'. Output ONLY the single word from: [tech, gaming, finance, politics, random]."
+          content: "You are a 0null classifier. Keywords: [Trump, Hitler, Biden, Election, War, Politics] MUST result in the niche 'politics'. Reason through the context first, then output ONLY the lowercase word: tech, gaming, finance, politics, or random."
         },
         {
           role: 'user',
@@ -32,6 +33,8 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
         }
       ],
       max_tokens: 20,
+      // @ts-ignore - reasoning may not be in types
+      reasoning: { enabled: true },
     });
 
     const content = response.choices?.[0]?.message?.content?.trim().toLowerCase() || '';
@@ -39,7 +42,7 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
     console.log("[GHOST BRAIN] Raw AI Answer:", content);
     console.log("[GHOST BRAIN] Full Response:", JSON.stringify(response, null, 2));
     
-    // @ts-expect-error - reasoning_details may not be in types
+    // @ts-ignore - reasoning_details may not be in types
     const reasoning = response.choices?.[0]?.message?.reasoning_details;
     if (reasoning) {
       console.log("[GHOST BRAIN] Reasoning:", reasoning);

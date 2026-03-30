@@ -1,141 +1,144 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-
-type ConnectionStatus = 'connecting' | 'connected' | 'error' | 'timeout';
-
-const GLOBAL_CHANNEL = '0null-global-presence';
+import { useState, useEffect, useRef, useCallback } from "react";
 
 interface GhostCounterProps {
   onCountChange?: (newCount: number, prevCount: number) => void;
 }
 
 interface GhostState {
-  status: ConnectionStatus;
+  status: 'connecting' | 'connected' | 'error';
   count: number;
 }
 
+const HEARTBEAT_INTERVAL = 60000; // 60 seconds
+const STALE_THRESHOLD = 180000; // 3 minutes in ms
+const GHOST_ID_KEY = "0null_ghost_id";
+
 export default function GhostCounter({ onCountChange }: GhostCounterProps) {
-  const [state, setState] = useState<GhostState>({
-    status: 'connecting',
-    count: 0
-  });
-  
-  const channelRef = useRef<{ unsubscribe: () => void; track: (state: object) => void } | null>(null);
-  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [state, setState] = useState<GhostState>({ status: 'connecting', count: 0 });
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
   const prevCountRef = useRef(0);
 
+  const getGhostId = () => {
+    let id = localStorage.getItem(GHOST_ID_KEY);
+    if (!id) {
+      id = `ghost-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem(GHOST_ID_KEY, id);
+    }
+    return id;
+  };
+
+  const updatePresence = useCallback(async () => {
+    if (typeof window === 'undefined') return null;
+    
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) return null;
+    
+    const ghostId = getGhostId();
+    
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      
+      // Upsert presence row
+      await supabase.from("presence").upsert({
+        ghost_id: ghostId,
+        last_seen_at: new Date().toISOString(),
+      }, {
+        onConflict: 'ghost_id'
+      });
+      
+      return supabase;
+    } catch (e) {
+      console.error("[GHOST] Failed to update presence:", e);
+      return null;
+    }
+  }, []);
+
+  const fetchGhostCount = useCallback(async (supabase: any) => {
+    if (!mountedRef.current) return 0;
+    
+    try {
+      const cutoff = new Date(Date.now() - STALE_THRESHOLD).toISOString();
+      const { count, error } = await supabase
+        .from("presence")
+        .select("*", { count: "exact", head: true })
+        .gte("last_seen_at", cutoff);
+      
+      if (error) throw error;
+      return count || 0;
+    } catch (e) {
+      console.error("[GHOST] Count fetch error:", e);
+      return 1;
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      setState({ status: 'error', count: 1 });
-      return;
-    }
-
     mountedRef.current = true;
 
-    // 15 second timeout
-    timeoutRef.current = setTimeout(() => {
-      if (mountedRef.current && !channelRef.current) {
-        setState({ status: 'timeout', count: 1 });
-      }
-    }, 15000);
-
-    import("@supabase/supabase-js").then(({ createClient }) => {
+    const init = async () => {
+      const supabase = await updatePresence();
       if (!mountedRef.current) return;
-
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
       
-      const channel = supabase.channel(GLOBAL_CHANNEL, {
-        config: { presence: { key: `ghost-${Math.random().toString(36).substr(2, 9)}` } }
-      });
+      if (!supabase) {
+        setState({ status: 'error', count: 1 });
+        return;
+      }
 
-      channelRef.current = channel;
+      // Initial count
+      const initialCount = await fetchGhostCount(supabase);
+      if (!mountedRef.current) return;
+      
+      prevCountRef.current = initialCount;
+      setState({ status: 'connected', count: initialCount });
+      onCountChange?.(initialCount, 0);
 
-      const getCount = () => {
-        const presence = channel.presenceState();
-        const keys = Object.keys(presence);
-        return keys.length === 0 ? 1 : keys.length;
-      };
-
-      channel.subscribe((status) => {
-        if (!mountedRef.current || !channelRef.current) return;
-
-        if (status === 'SUBSCRIBED') {
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
-
-          channel.track({ online_at: Date.now() });
-
-          heartbeatRef.current = setInterval(() => {
-            if (channelRef.current && mountedRef.current) {
-              channelRef.current.track({ online_at: Date.now() });
-            }
-          }, 30000);
-
-          const newCount = getCount();
-          setState({ status: 'connected', count: newCount });
-
-          // Notify parent of initial count (don't play sound)
-          onCountChange?.(newCount, prevCountRef.current);
-
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          setState({ status: 'error', count: 1 });
-          if (heartbeatRef.current) {
-            clearInterval(heartbeatRef.current);
-          }
+      // Heartbeat every 60 seconds
+      heartbeatRef.current = setInterval(async () => {
+        if (!mountedRef.current) return;
+        await updatePresence();
+        
+        // Also fetch updated count
+        const newCount = await fetchGhostCount(supabase);
+        if (!mountedRef.current) return;
+        
+        const prevCount = prevCountRef.current;
+        if (newCount > prevCount && prevCount > 0) {
+          onCountChange?.(newCount, prevCount);
         }
-      });
+        prevCountRef.current = newCount;
+        setState({ status: 'connected', count: newCount });
+      }, HEARTBEAT_INTERVAL);
 
-      channel.on("presence", { event: "sync" }, () => {
+      // Poll count more frequently (every 30s)
+      pollRef.current = setInterval(async () => {
         if (!mountedRef.current) return;
+        const newCount = await fetchGhostCount(supabase);
+        if (!mountedRef.current) return;
+        
         const prevCount = prevCountRef.current;
-        const newCount = getCount();
+        if (newCount > prevCount && prevCount > 0) {
+          onCountChange?.(newCount, prevCount);
+        }
         prevCountRef.current = newCount;
-        setState(prev => ({ ...prev, count: newCount }));
-        onCountChange?.(newCount, prevCount);
-      });
+        setState({ status: 'connected', count: newCount });
+      }, 30000);
+    };
 
-      channel.on("presence", { event: "join" }, () => {
-        if (!mountedRef.current) return;
-        const prevCount = prevCountRef.current;
-        const newCount = getCount();
-        prevCountRef.current = newCount;
-        setState(prev => ({ ...prev, count: newCount }));
-        onCountChange?.(newCount, prevCount);
-      });
-
-      channel.on("presence", { event: "leave" }, () => {
-        if (!mountedRef.current) return;
-        const newCount = getCount();
-        prevCountRef.current = newCount;
-        setState(prev => ({ ...prev, count: newCount }));
-      });
-
-    }).catch((err) => {
-      setState({ status: 'error', count: 1 });
-    });
+    init();
 
     return () => {
       mountedRef.current = false;
-      
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      
-      if (channelRef.current) {
-        channelRef.current.unsubscribe();
-        channelRef.current = null;
-      }
+      if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [onCountChange]);
+  }, [updatePresence, fetchGhostCount, onCountChange]);
 
   const getDisplay = () => {
     if (state.status === 'connecting') {
