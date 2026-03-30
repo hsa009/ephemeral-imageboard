@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       success: true, 
       thread: data,
       debug: {
-        aiResponse: niche,
+        niche_found: niche,
         rawAIOutput: classification.rawResponse,
         reasoning: classification.reasoning,
       }

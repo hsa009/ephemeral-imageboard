@@ -36,7 +36,7 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       messages: [
         {
           role: 'system',
-          content: "You are a one-word classifier. If the text mentions political figures (e.g., Trump, Hitler, Biden), world leaders, or elections, you MUST output 'politics'. Otherwise, choose from [tech, gaming, finance, random]. Output ONLY the word."
+          content: "You are the 0null Ghost-Brain. Your task is one-word classification. If a post mentions Trump, Hitler, Biden, politics, war, or world leaders, the niche MUST be 'politics'. Otherwise, choose from [tech, gaming, finance, random]. Reason through the identity of any names mentioned before deciding. Output ONLY the lowercase word."
         },
         {
           role: 'user',
