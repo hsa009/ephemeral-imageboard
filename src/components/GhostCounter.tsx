@@ -83,6 +83,7 @@ export default function GhostCounter({ onCountChange }: GhostCounterProps) {
     mountedRef.current = true;
 
     const init = async () => {
+      // @ts-expect-error - dynamic import type
       const supabase = await updatePresence();
       if (!mountedRef.current) return;
       
