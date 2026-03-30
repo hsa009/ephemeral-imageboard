@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
         niche_found: niche,
         rawAIOutput: classification.rawResponse,
         reasoning: classification.reasoning,
+        fullOutput: classification.fullOutput,
       }
     });
     
