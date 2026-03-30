@@ -28,7 +28,6 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
           content: `Subject: ${subject}\nComment: ${comment}`
         }
       ],
-      reasoning: { enabled: true },
       max_tokens: 20,
     });
 
