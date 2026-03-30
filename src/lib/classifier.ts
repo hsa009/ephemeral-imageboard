@@ -20,7 +20,6 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
     console.log("[GHOST BRAIN] Attempting connection to OpenRouter...");
     console.log("[GHOST BRAIN] Payload Sent:", { subject, comment });
 
-    // @ts-expect-error - reasoning may not be in types
     const response = await client.chat.completions.create({
       model: 'arcee-ai/trinity-mini:free',
       messages: [
@@ -34,17 +33,15 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
         }
       ],
       max_tokens: 20,
-      // @ts-expect-error - reasoning may not be in types
       reasoning: { enabled: true },
-    });
+    } as any);
 
     const content = response.choices?.[0]?.message?.content?.trim().toLowerCase() || '';
     
     console.log("[GHOST BRAIN] Raw AI Answer:", content);
     console.log("[GHOST BRAIN] Full Response:", JSON.stringify(response, null, 2));
     
-    // @ts-expect-error - reasoning_details may not be in types
-    const reasoning = response.choices?.[0]?.message?.reasoning_details;
+    const reasoning = (response.choices?.[0]?.message as any)?.reasoning_details;
     if (reasoning) {
       console.log("[GHOST BRAIN] Reasoning:", reasoning);
     }
