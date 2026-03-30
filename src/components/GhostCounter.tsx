@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 interface GhostCounterProps {
   onCountChange?: (newCount: number, prevCount: number) => void;
 }
@@ -60,7 +62,7 @@ export default function GhostCounter({ onCountChange }: GhostCounterProps) {
     }
   }, []);
 
-  const fetchGhostCount = useCallback(async (supabase: any) => {
+  const fetchGhostCount = useCallback(async (supabase: SupabaseClient) => {
     if (!mountedRef.current) return 0;
     
     try {
@@ -83,7 +85,6 @@ export default function GhostCounter({ onCountChange }: GhostCounterProps) {
     mountedRef.current = true;
 
     const init = async () => {
-      // @ts-expect-error - dynamic import type
       const supabase = await updatePresence();
       if (!mountedRef.current) return;
       
