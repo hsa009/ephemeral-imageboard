@@ -44,7 +44,8 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
         }
       ],
       max_tokens: 20,
-      reasoning: { enabled: true },
+      // @ts-expect-error - reasoning is supported by OpenRouter but not in SDK types
+      reasoning: { enabled: true } as any,
     });
 
     const content = response.choices?.[0]?.message?.content?.trim().toLowerCase() || '';
