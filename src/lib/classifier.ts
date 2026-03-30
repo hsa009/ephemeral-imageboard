@@ -16,7 +16,7 @@ const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
 
 export async function classifyNiche(subject: string, comment: string): Promise<ClassificationResult> {
   const defaultResult: ClassificationResult = { niche: 'random' };
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     console.log("[GHOST BRAIN] No API key, defaulting to random");
     return defaultResult;
@@ -36,7 +36,7 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       messages: [
         {
           role: 'system',
-          content: "You are a 0null classifier. Keywords: [Trump, Hitler, Biden, Election, War, Politics] MUST result in the niche 'politics'. Reason through the context first, then output ONLY the lowercase word: tech, gaming, finance, politics, or random."
+          content: "You are a one-word classifier. If the text mentions political figures (e.g., Trump, Hitler, Biden), world leaders, or elections, you MUST output 'politics'. Otherwise, choose from [tech, gaming, finance, random]. Output ONLY the word."
         },
         {
           role: 'user',
@@ -44,7 +44,7 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
         }
       ],
       max_tokens: 20,
-      reasoning_effort: 'medium',
+      reasoning: { enabled: true },
     });
 
     const content = response.choices?.[0]?.message?.content?.trim().toLowerCase() || '';
