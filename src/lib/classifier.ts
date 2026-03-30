@@ -10,6 +10,7 @@ interface ClassificationResult {
   niche: string;
   rawResponse?: string;
   reasoning?: string;
+  fullText?: string;
 }
 
 const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
@@ -36,7 +37,7 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       messages: [
         {
           role: 'system',
-          content: "You are the 0null Ghost-Brain. Your task is one-word classification. If a post mentions Trump, Hitler, Biden, politics, war, or world leaders, the niche MUST be 'politics'. Otherwise, choose from [tech, gaming, finance, random]. Reason through the identity of any names mentioned before deciding. Output ONLY the lowercase word."
+          content: "After your reasoning, you MUST provide the final category in double brackets at the very end of your message. Example: [[politics]]. Choose from: [[tech]], [[gaming]], [[finance]], [[politics]], [[random]]."
         },
         {
           role: 'user',
@@ -48,26 +49,29 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       reasoning: { enabled: true },
     });
 
-    const content = response.choices?.[0]?.message?.content?.trim().toLowerCase() || '';
-    
-    console.log("[GHOST BRAIN] Raw AI Answer:", content);
-    console.log("[GHOST BRAIN] Full Response:", JSON.stringify(response, null, 2));
-    
+    const content = response.choices?.[0]?.message?.content || '';
     const message = response.choices?.[0]?.message as ReasoningMessage;
-    const reasoning = message?.reasoning_details;
-    if (reasoning) {
-      console.log("[GHOST BRAIN] Reasoning:", reasoning);
-    }
-
-    const niche = content.replace(/[^a-z]/g, '');
+    const reasoning = message?.reasoning_details || '';
+    
+    console.log("[GHOST BRAIN] Content:", content);
+    console.log("[GHOST BRAIN] Reasoning:", reasoning);
+    
+    const fullText = content + ' ' + JSON.stringify(reasoning);
+    console.log("[GHOST BRAIN] Full Text for extraction:", fullText);
+    
+    // Extract from double brackets
+    const match = fullText.match(/\[\[(tech|gaming|finance|politics|random)\]\]/i);
+    const niche = match ? match[1].toLowerCase() : 'random';
+    
+    console.log("[GHOST BRAIN] Extracted Niche:", niche);
 
     if (VALID_NICHES.includes(niche)) {
       console.log("[GHOST BRAIN] Final Niche Selected:", niche);
-      return { niche, rawResponse: content, reasoning };
+      return { niche, rawResponse: content, reasoning, fullText };
     }
 
     console.log("[GHOST BRAIN] Invalid response:", content, "-> defaulting to random");
-    return { niche: 'random', rawResponse: content, reasoning };
+    return { niche: 'random', rawResponse: content, reasoning, fullText };
 
   } catch (error) {
     console.error("[GHOST BRAIN] Connection Error:", error instanceof Error ? error.message : String(error));
