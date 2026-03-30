@@ -42,7 +42,7 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
     console.log("[GHOST BRAIN] Raw AI Answer:", content);
     console.log("[GHOST BRAIN] Full Response:", JSON.stringify(response, null, 2));
     
-    // @ts-ignore - reasoning_details may not be in types
+    // @ts-expect-error - reasoning_details may not be in types
     const reasoning = response.choices?.[0]?.message?.reasoning_details;
     if (reasoning) {
       console.log("[GHOST BRAIN] Reasoning:", reasoning);
