@@ -35,9 +35,9 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
       max_tokens: 20,
     });
 
-    const data = response as any;
+    const data = response;
     console.log("[AI DEBUG] Raw API Response:", JSON.stringify(data, null, 2));
-    if (data.reasoning_details) console.log("[AI DEBUG] Reasoning:", data.reasoning_details);
+    if ('reasoning_details' in data && data.reasoning_details) console.log("[AI DEBUG] Reasoning:", data.reasoning_details);
 
     const content = response.choices?.[0]?.message?.content?.trim().toLowerCase() || '';
     const niche = content.replace(/[^a-z]/g, ''); // Strip punctuation
@@ -51,8 +51,8 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
     console.log('[Classifier] Invalid response:', content, '-> defaulting to random');
     return 'random';
 
-  } catch (error: any) {
-    console.error("[AI ERROR] Classification failed:", error.message || error);
+  } catch (error) {
+    console.error("[AI ERROR] Classification failed:", error instanceof Error ? error.message : String(error));
     return 'random';
   }
 }
