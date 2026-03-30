@@ -1,5 +1,5 @@
 // Build trigger - forced fresh deploy
-// Advanced AI Classifier with Reasoning
+// Two-turn conversation classifier for forced final classification
 import OpenAI from 'openai';
 
 interface ReasoningMessage extends OpenAI.ChatCompletionMessage {
@@ -18,6 +18,7 @@ const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
 export async function classifyNiche(subject: string, comment: string): Promise<ClassificationResult> {
   const defaultResult: ClassificationResult = { niche: 'random' };
   const apiKey = process.env.GROQ_API_KEY;
+  
   if (!apiKey) {
     console.log("[GHOST BRAIN] No API key, defaulting to random");
     return defaultResult;
@@ -29,48 +30,69 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       apiKey,
     });
 
-    console.log("[GHOST BRAIN] Attempting connection to OpenRouter...");
-    console.log("[GHOST BRAIN] Payload Sent:", { subject, comment });
+    console.log("[GHOST BRAIN] Turn 1: Sending for reasoning analysis...");
+    console.log("[GHOST BRAIN] Payload:", { subject, comment });
 
-    const response = await client.chat.completions.create({
+    // Turn 1: Initial reasoning call
+    const firstResponse = await client.chat.completions.create({
       model: 'arcee-ai/trinity-mini:free',
       messages: [
-        {
-          role: 'system',
-          content: "If it involves Trump, Hitler, Biden, or world leaders/politics/war, say 'politics'. Otherwise choose one word: tech, gaming, finance, or random."
+        { 
+          role: 'user', 
+          content: `Analyze and reason through this post. What category does it belong to? Subject: ${subject} Comment: ${comment}` 
+        }
+      ],
+      // @ts-expect-error - reasoning not in SDK types
+      reasoning: { enabled: true },
+      max_tokens: 500,
+    });
+
+    const message1 = firstResponse.choices[0].message;
+    const reasoning = (message1 as ReasoningMessage)?.reasoning_details || '';
+    
+    console.log("[GHOST BRAIN] Turn 1 Reasoning:", reasoning);
+    console.log("[GHOST BRAIN] Turn 1 Content:", message1.content);
+
+    // Turn 2: Forced final answer
+    console.log("[GHOST BRAIN] Turn 2: Requesting final classification...");
+    
+    const finalResponse = await client.chat.completions.create({
+      model: 'arcee-ai/trinity-mini:free',
+      messages: [
+        { 
+          role: 'user', 
+          content: `Analyze and reason through this post. What category does it belong to? Subject: ${subject} Comment: ${comment}` 
         },
-        {
-          role: 'user',
-          content: `Subject: ${subject}\nComment: ${comment}`
+        { 
+          role: 'assistant', 
+          content: message1.content || '',
+          // @ts-expect-error - reasoning_details not in types
+          reasoning_details: message1.reasoning_details 
+        },
+        { 
+          role: 'user', 
+          content: "Based on your reasoning, output EXACTLY one word from this list: [tech, gaming, finance, politics, random]. If it's about Trump, Hitler, or War, it must be 'politics'. Output ONLY the word, no explanation." 
         }
       ],
       max_tokens: 20,
-      // @ts-expect-error - reasoning is not in SDK types
-      reasoning: { enabled: true },
     });
 
-    const content = response.choices?.[0]?.message?.content || '';
+    const finalContent = finalResponse.choices[0]?.message?.content?.trim().toLowerCase() || '';
     
-    // @ts-expect-error - reasoning_details not in types
-    const reasoning = response.choices?.[0]?.message?.reasoning_details || '';
-    
-    console.log("[GHOST BRAIN] Content:", content);
-    console.log("[GHOST BRAIN] Reasoning:", reasoning);
-    
-    // Merge content and reasoning, then search for keywords
-    const fullOutput = (content + ' ' + JSON.stringify(reasoning)).toLowerCase();
-    console.log("[GHOST BRAIN] Full Output:", fullOutput);
-    
-    // Simple keyword extraction - prioritize politics
-    let niche = 'random';
-    if (fullOutput.includes('politics')) niche = 'politics';
-    else if (fullOutput.includes('tech')) niche = 'tech';
-    else if (fullOutput.includes('gaming')) niche = 'gaming';
-    else if (fullOutput.includes('finance')) niche = 'finance';
-    
-    console.log("[GHOST BRAIN] Final Niche:", niche);
+    console.log("[GHOST BRAIN] Turn 2 Final Answer:", finalContent);
+    console.log("[GHOST BRAIN] Full Final Response:", JSON.stringify(finalResponse.choices[0], null, 2));
 
-    return { niche, rawResponse: content, reasoning, fullOutput };
+    // Extract valid niche
+    const niche = VALID_NICHES.includes(finalContent) ? finalContent : 'random';
+    
+    console.log("[GHOST BRAIN] Final Niche Selected:", niche);
+    
+    return { 
+      niche, 
+      rawResponse: finalContent, 
+      reasoning,
+      fullOutput: reasoning + ' ' + finalContent
+    };
 
   } catch (error) {
     console.error("[GHOST BRAIN] Connection Error:", error instanceof Error ? error.message : String(error));
