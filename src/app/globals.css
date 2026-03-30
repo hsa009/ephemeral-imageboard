@@ -903,3 +903,75 @@ header h1 span {
 .modal, .modal-content, .modal-header, .modal-close {
   display: none;
 }
+
+/* Void Timer */
+.void-timer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-family: monospace;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.void-timer.normal {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.void-timer.warning {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.void-timer.critical {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  animation: void-glitch 1s ease-in-out infinite;
+}
+
+.void-timer.expired {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  opacity: 0.5;
+}
+
+.void-label {
+  opacity: 0.7;
+}
+
+.void-time {
+  font-weight: 600;
+}
+
+.void-pulse {
+  width: 4px;
+  height: 4px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: void-blink 0.5s ease-in-out infinite;
+}
+
+@keyframes void-glitch {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1px); }
+  75% { transform: translateX(1px); }
+}
+
+@keyframes void-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Thread card void timer positioning */
+.thread-card {
+  position: relative;
+}
+
+.thread-card .void-timer {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+}

@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import GhostCounter from "@/components/GhostCounter";
+import VoidTimer from "@/components/VoidTimer";
 import { useSound, playSuccess, playError, playGhost } from "@/hooks/useSound";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { isThreadExpired } from "@/components/VoidTimer";
 
 interface Thread {
   id: number;
@@ -319,7 +321,12 @@ export default function Home() {
     setLoading(true);
     try {
       const res = await fetch("/api/thread/list");
-      if (res.ok) { const data = await res.json(); setThreads(data.threads || []); }
+      if (res.ok) { 
+        const data = await res.json(); 
+        // Filter out expired threads
+        const activeThreads = (data.threads || []).filter((t: { last_bumped_at: string }) => !isThreadExpired(t.last_bumped_at));
+        setThreads(activeThreads); 
+      }
     } catch (e) { console.error("Failed to fetch threads:", e); }
     finally { setLoading(false); }
   };
@@ -708,7 +715,16 @@ export default function Home() {
 
       {/* Thread Catalog */}
       <div className="catalog">
-        {threads.map(thread => <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread)}>{thread.image_filename && <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />}<div className="thread-info"><div className="thread-subject">{thread.subject}</div><div className="thread-meta">{thread.bump_count} replies • {new Date(thread.last_bumped_at).toLocaleTimeString()}</div></div></div>)}
+        {threads.map(thread => (
+            <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread)}>
+              <VoidTimer lastBumpAt={thread.last_bumped_at} />
+              {thread.image_filename && <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />}
+              <div className="thread-info">
+                <div className="thread-subject">{thread.subject}</div>
+                <div className="thread-meta">{thread.bump_count} replies • {new Date(thread.last_bumped_at).toLocaleTimeString()}</div>
+              </div>
+            </div>
+          ))}
       </div>
       {loading && <div className="loading">Loading...</div>}
       {!loading && threads.length === 0 && <div className="loading">No threads yet. Be the first to post!</div>}
