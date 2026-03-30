@@ -65,7 +65,7 @@ export default function GhostCounter({ onCountChange }: GhostCounterProps) {
       };
 
       channel.subscribe((status) => {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || !channelRef.current) return;
 
         if (status === 'SUBSCRIBED') {
           if (timeoutRef.current) {
