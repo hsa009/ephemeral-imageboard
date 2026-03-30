@@ -2,6 +2,10 @@
 // Advanced AI Classifier with Reasoning
 import OpenAI from 'openai';
 
+interface ReasoningMessage extends OpenAI.ChatCompletionMessage {
+  reasoning_details?: string;
+}
+
 const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
 
 export async function classifyNiche(subject: string, comment: string): Promise<string> {
@@ -33,15 +37,16 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
         }
       ],
       max_tokens: 20,
-      reasoning: { enabled: true },
-    } as any);
+      reasoning_effort: 'medium',
+    });
 
     const content = response.choices?.[0]?.message?.content?.trim().toLowerCase() || '';
     
     console.log("[GHOST BRAIN] Raw AI Answer:", content);
     console.log("[GHOST BRAIN] Full Response:", JSON.stringify(response, null, 2));
     
-    const reasoning = (response.choices?.[0]?.message as any)?.reasoning_details;
+    const message = response.choices?.[0]?.message as ReasoningMessage;
+    const reasoning = message?.reasoning_details;
     if (reasoning) {
       console.log("[GHOST BRAIN] Reasoning:", reasoning);
     }
