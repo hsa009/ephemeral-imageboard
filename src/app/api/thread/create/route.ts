@@ -103,7 +103,8 @@ export async function POST(request: NextRequest) {
 
     // Classify niche using AI
     console.log('[Thread-Create] Classifying niche...');
-    const niche = await classifyNiche(subject, comment);
+    const classification = await classifyNiche(subject, comment);
+    const niche = classification.niche;
 
     // Insert into database
     console.log('[Thread-Create] Inserting thread...');
@@ -130,7 +131,16 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Thread-Create] Success! Thread ID:', data.id);
-    return NextResponse.json({ success: true, thread: data });
+    console.log('[GHOST BRAIN] Bridge to browser - Final niche:', niche);
+    return NextResponse.json({ 
+      success: true, 
+      thread: data,
+      debug: {
+        aiResponse: niche,
+        rawAIOutput: classification.rawResponse,
+        reasoning: classification.reasoning,
+      }
+    });
     
   } catch (error) {
     console.error('[Thread-Create] Error:', error);

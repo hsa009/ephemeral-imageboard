@@ -6,13 +6,20 @@ interface ReasoningMessage extends OpenAI.ChatCompletionMessage {
   reasoning_details?: string;
 }
 
+interface ClassificationResult {
+  niche: string;
+  rawResponse?: string;
+  reasoning?: string;
+}
+
 const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
 
-export async function classifyNiche(subject: string, comment: string): Promise<string> {
+export async function classifyNiche(subject: string, comment: string): Promise<ClassificationResult> {
+  const defaultResult: ClassificationResult = { niche: 'random' };
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     console.log("[GHOST BRAIN] No API key, defaulting to random");
-    return 'random';
+    return defaultResult;
   }
 
   try {
@@ -55,14 +62,14 @@ export async function classifyNiche(subject: string, comment: string): Promise<s
 
     if (VALID_NICHES.includes(niche)) {
       console.log("[GHOST BRAIN] Final Niche Selected:", niche);
-      return niche;
+      return { niche, rawResponse: content, reasoning };
     }
 
     console.log("[GHOST BRAIN] Invalid response:", content, "-> defaulting to random");
-    return 'random';
+    return { niche: 'random', rawResponse: content, reasoning };
 
   } catch (error) {
     console.error("[GHOST BRAIN] Connection Error:", error instanceof Error ? error.message : String(error));
-    return 'random';
+    return defaultResult;
   }
 }

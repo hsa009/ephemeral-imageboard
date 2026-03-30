@@ -385,6 +385,9 @@ export default function Home() {
         setShowCreateForm(false);
         
         const data = await res.json();
+        if (data.debug) {
+          console.log("[GHOST BRAIN DEBUG]:", JSON.stringify(data.debug, null, 2));
+        }
         if (data.thread?.id) saveMyPost(data.thread.id);
         
         // Refresh data
