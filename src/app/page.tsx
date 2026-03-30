@@ -664,22 +664,6 @@ export default function Home() {
           <a href="#" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); }}>New Thread</a>
         </nav>
       </header>
-      {showCreateForm && (
-        <div className="create-form">
-          <h2>Create new thread</h2>
-          <form onSubmit={handleCreateThread}>
-            <div className="form-row">
-              <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} />
-              <input type="text" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
-            </div>
-            <textarea placeholder="Comment" value={comment} onChange={(e) => setComment(e.target.value)} required />
-            <div className="form-actions">
-              <div className="file-input"><label><input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /></label></div>
-              <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>{powLoading ? "Computing PoW..." : loading ? "Posting..." : "Create Thread"}</button>
-            </div>
-          </form>
-        </div>
-      )}
       {/* Inline Thread Creation Form */}
       <div className="inline-create">
         {!showCreateForm ? (
