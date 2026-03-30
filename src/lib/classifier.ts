@@ -1,52 +1,50 @@
-// Groq AI Classifier for auto-niche
-
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "llama3-8b-8192";
-
-const SYSTEM_PROMPT = "You are a specialized 0null data classifier. Categorize the user's post into exactly one of these niches: [tech, gaming, finance, politics, random]. Response must be ONLY the single word, lowercase, no punctuation.";
+// Advanced AI Classifier with Reasoning
+import OpenAI from 'openai';
 
 const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
 
 export async function classifyNiche(subject: string, comment: string): Promise<string> {
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
+    console.log('[Classifier] No OPENROUTER_API_KEY, defaulting to random');
     return 'random';
   }
 
   try {
-    const content = `Subject: ${subject}\n\nComment: ${comment.slice(0, 1000)}`;
-
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content }
-        ],
-        max_tokens: 10,
-      }),
+    const client = new OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey,
     });
 
-    if (!response.ok) {
-      return 'random';
-    }
+    const response = await client.chat.completions.create({
+      model: 'arcee-ai/trinity-mini:free',
+      messages: [
+        {
+          role: 'system',
+          content: "Analyze the thread content. First, reason internally about the subject matter. Then, output EXACTLY one word from this list: [tech, gaming, finance, politics, random]. If the content involves historical figures, world events, or ideology, use 'politics'."
+        },
+        {
+          role: 'user',
+          content: `Subject: ${subject}\nComment: ${comment}`
+        }
+      ],
+      reasoning: { enabled: true },
+      max_tokens: 20,
+    });
 
-    const data = await response.json();
-    const niche = data.choices?.[0]?.message?.content?.trim()?.toLowerCase() || '';
+    const content = response.choices?.[0]?.message?.content?.trim().toLowerCase() || '';
+    const niche = content.replace(/[^a-z]/g, ''); // Strip punctuation
 
     if (VALID_NICHES.includes(niche)) {
-      console.log("[GROQ DEBUG]:", niche);
+      console.log('[OR REASONING DEBUG]:', niche);
       return niche;
     }
 
+    console.log('[Classifier] Invalid response:', content, '-> defaulting to random');
     return 'random';
 
-  } catch {
+  } catch (error) {
+    console.error('[Classifier] Error:', error);
     return 'random';
   }
 }
