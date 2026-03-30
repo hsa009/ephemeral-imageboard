@@ -10,7 +10,7 @@ interface ClassificationResult {
   niche: string;
   rawResponse?: string;
   reasoning?: string;
-  fullText?: string;
+  fullOutput?: string;
 }
 
 const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
@@ -37,7 +37,7 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       messages: [
         {
           role: 'system',
-          content: "After your reasoning, you MUST provide the final category in double brackets at the very end of your message. Example: [[politics]]. Choose from: [[tech]], [[gaming]], [[finance]], [[politics]], [[random]]."
+          content: "If it involves Trump, Hitler, Biden, or world leaders/politics/war, say 'politics'. Otherwise choose one word: tech, gaming, finance, or random."
         },
         {
           role: 'user',
@@ -50,28 +50,27 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
     });
 
     const content = response.choices?.[0]?.message?.content || '';
-    const message = response.choices?.[0]?.message as ReasoningMessage;
-    const reasoning = message?.reasoning_details || '';
+    
+    // @ts-expect-error - reasoning_details not in types
+    const reasoning = response.choices?.[0]?.message?.reasoning_details || '';
     
     console.log("[GHOST BRAIN] Content:", content);
     console.log("[GHOST BRAIN] Reasoning:", reasoning);
     
-    const fullText = content + ' ' + JSON.stringify(reasoning);
-    console.log("[GHOST BRAIN] Full Text for extraction:", fullText);
+    // Merge content and reasoning, then search for keywords
+    const fullOutput = (content + ' ' + JSON.stringify(reasoning)).toLowerCase();
+    console.log("[GHOST BRAIN] Full Output:", fullOutput);
     
-    // Extract from double brackets
-    const match = fullText.match(/\[\[(tech|gaming|finance|politics|random)\]\]/i);
-    const niche = match ? match[1].toLowerCase() : 'random';
+    // Simple keyword extraction - prioritize politics
+    let niche = 'random';
+    if (fullOutput.includes('politics')) niche = 'politics';
+    else if (fullOutput.includes('tech')) niche = 'tech';
+    else if (fullOutput.includes('gaming')) niche = 'gaming';
+    else if (fullOutput.includes('finance')) niche = 'finance';
     
-    console.log("[GHOST BRAIN] Extracted Niche:", niche);
+    console.log("[GHOST BRAIN] Final Niche:", niche);
 
-    if (VALID_NICHES.includes(niche)) {
-      console.log("[GHOST BRAIN] Final Niche Selected:", niche);
-      return { niche, rawResponse: content, reasoning, fullText };
-    }
-
-    console.log("[GHOST BRAIN] Invalid response:", content, "-> defaulting to random");
-    return { niche: 'random', rawResponse: content, reasoning, fullText };
+    return { niche, rawResponse: content, reasoning, fullOutput };
 
   } catch (error) {
     console.error("[GHOST BRAIN] Connection Error:", error instanceof Error ? error.message : String(error));
