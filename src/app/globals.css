@@ -37,7 +37,7 @@ header {
   align-items: center;
   padding: 20px 0;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 30px;
+  margin-bottom: 0;
 }
 
 header h1 {
@@ -974,4 +974,91 @@ header h1 span {
   top: 8px;
   right: 8px;
   z-index: 1;
+}
+
+/* Search Input */
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-label {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.search-input {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  width: 180px;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #f59e0b;
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+/* Niche Navigation */
+.niche-nav {
+  display: flex;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.niche-link {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+
+.niche-link:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.niche-link.active {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+/* Thread Niche Badge */
+.thread-niche {
+  font-family: monospace;
+  font-size: 0.7rem;
+  color: #f59e0b;
+  margin-bottom: 4px;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+  font-family: monospace;
+  font-size: 0.9rem;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border);
+  margin-top: 20px;
 }

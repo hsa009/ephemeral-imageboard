@@ -5,8 +5,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getReadSignedUrl } from '@/lib/s3';
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const niche = searchParams.get('niche');
+    const search = searchParams.get('search');
+
     if (!supabaseAdmin) {
       return NextResponse.json({
         service: 'Supabase_Connection',
@@ -18,11 +22,25 @@ export async function GET(_request: NextRequest) {
       }, { status: 500 });
     }
 
-    const { data: threads, error } = await supabaseAdmin
+    // Build query
+    let query = supabaseAdmin
       .from('threads')
       .select('*')
       .order('last_bumped_at', { ascending: false })
       .limit(150);
+
+    // Filter by niche if provided
+    if (niche && niche !== 'all') {
+      query = query.eq('niche', niche);
+    }
+
+    // Full-text search if provided
+    if (search && search.trim()) {
+      const searchTerm = search.trim().split(/\s+/).join(' & ');
+      query = query.textSearch('fts', searchTerm);
+    }
+
+    const { data: threads, error } = await query;
 
     if (error) {
       console.error('Supabase error:', error);
@@ -30,7 +48,6 @@ export async function GET(_request: NextRequest) {
         service: 'Supabase_Query',
         error: error.message,
         errorCode: error.code,
-        details: error
       }, { status: 500 });
     }
 
@@ -41,7 +58,6 @@ export async function GET(_request: NextRequest) {
             const url = await getReadSignedUrl(thread.image_filename, 3600);
             return { ...thread, image_filename: url };
           } catch (e) {
-            console.error('Failed to generate signed URL:', e);
             return { ...thread, image_filename: null };
           }
         }
@@ -56,7 +72,6 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({
       service: 'Unknown',
       error: errorMessage,
-      details: String(error)
     }, { status: 500 });
   }
 }

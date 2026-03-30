@@ -18,6 +18,7 @@ interface Thread {
   bump_count: number;
   locked: boolean;
   reactions: Record<string, number>;
+  niche?: string;
 }
 
 interface Reply {
@@ -188,6 +189,8 @@ export default function Home() {
   const [collapsedReplies, setCollapsedReplies] = useState<Record<number, boolean>>({});
   const [muted, setMuted] = useState(false);
   const [soundInitialized, setSoundInitialized] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeNiche, setActiveNiche] = useState("all");
   const previousGhostCount = useRef<number>(0);
   
   // Refs for focusing inputs
@@ -199,7 +202,7 @@ export default function Home() {
     const handleScroll = () => setShowFab(window.scrollY > 300);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [activeNiche, searchQuery]);
 
   // Load mute state
   useEffect(() => {
@@ -217,6 +220,8 @@ export default function Home() {
     onCloseModal: () => {
       setShowCreateForm(false);
       setReplyingTo(null);
+      setSearchQuery("");
+      setActiveNiche("all");
     },
     onSubmit: () => {
       if (selectedThread) {
@@ -320,7 +325,12 @@ export default function Home() {
   const fetchThreads = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/thread/list");
+      const params = new URLSearchParams();
+      if (activeNiche && activeNiche !== 'all') params.set('niche', activeNiche);
+      if (searchQuery && searchQuery.trim()) params.set('search', searchQuery.trim());
+      
+      const url = `/api/thread/list${params.toString() ? '?' + params.toString() : ''}`;
+      const res = await fetch(url);
       if (res.ok) { 
         const data = await res.json(); 
         // Filter out expired threads
@@ -663,7 +673,57 @@ export default function Home() {
           <a href="/chat">Chat</a>
           <a href="#" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); }}>New Thread</a>
         </nav>
+        <div className="search-container">
+          <label className="search-label">search_void:</label>
+          <input
+            type="text"
+            className="search-input"
+            placeholder="..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </header>
+      
+      {/* Niche Navigation */}
+      <div className="niche-nav">
+        <button
+          className={`niche-link ${activeNiche === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveNiche('all')}
+        >
+          ALL
+        </button>
+        <button
+          className={`niche-link ${activeNiche === 'tech' ? 'active' : ''}`}
+          onClick={() => setActiveNiche('tech')}
+        >
+          TECH
+        </button>
+        <button
+          className={`niche-link ${activeNiche === 'gaming' ? 'active' : ''}`}
+          onClick={() => setActiveNiche('gaming')}
+        >
+          GAMING
+        </button>
+        <button
+          className={`niche-link ${activeNiche === 'finance' ? 'active' : ''}`}
+          onClick={() => setActiveNiche('finance')}
+        >
+          FINANCE
+        </button>
+        <button
+          className={`niche-link ${activeNiche === 'politics' ? 'active' : ''}`}
+          onClick={() => setActiveNiche('politics')}
+        >
+          POLITICS
+        </button>
+        <button
+          className={`niche-link ${activeNiche === 'random' ? 'active' : ''}`}
+          onClick={() => setActiveNiche('random')}
+        >
+          RANDOM
+        </button>
+      </div>
       {/* Inline Thread Creation Form */}
       <div className="inline-create">
         {!showCreateForm ? (
@@ -704,6 +764,9 @@ export default function Home() {
               <VoidTimer lastBumpAt={thread.last_bumped_at} />
               {thread.image_filename && <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />}
               <div className="thread-info">
+                {thread.niche && (
+                  <div className="thread-niche">[ n: {thread.niche} ]</div>
+                )}
                 <div className="thread-subject">{thread.subject}</div>
                 <div className="thread-meta">{thread.bump_count} replies • {new Date(thread.last_bumped_at).toLocaleTimeString()}</div>
               </div>
@@ -711,7 +774,12 @@ export default function Home() {
           ))}
       </div>
       {loading && <div className="loading">Loading...</div>}
-      {!loading && threads.length === 0 && <div className="loading">No threads yet. Be the first to post!</div>}
+      {!loading && threads.length === 0 && (searchQuery || activeNiche !== 'all') && (
+        <div className="empty-state">[!] NO DATA FOUND IN THE VOID</div>
+      )}
+      {!loading && threads.length === 0 && !searchQuery && activeNiche === 'all' && (
+        <div className="loading">No threads yet. Be the first to post!</div>
+      )}
       <button className="fab" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><PlusIcon /></button>
     </div>
   );

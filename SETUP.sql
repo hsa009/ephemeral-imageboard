@@ -8,11 +8,13 @@ CREATE TABLE IF NOT EXISTS threads (
   image_filename TEXT,
   author_ip TEXT,
   username TEXT DEFAULT 'Anonymous',
+  niche TEXT DEFAULT 'random',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   last_bumped_at TIMESTAMPTZ DEFAULT NOW(),
   bump_count INTEGER DEFAULT 0,
   locked BOOLEAN DEFAULT FALSE,
-  reactions JSONB DEFAULT '{}'
+  reactions JSONB DEFAULT '{}',
+  fts tsvector GENERATED ALWAYS AS (to_tsvector('english', subject || ' ' || comment)) STORED
 );
 
 -- Create replies table
@@ -38,6 +40,8 @@ CREATE TABLE IF NOT EXISTS bans (
 
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_threads_bumped ON threads(last_bumped_at DESC);
+CREATE INDEX IF NOT EXISTS idx_threads_niche ON threads(niche);
+CREATE INDEX IF NOT EXISTS idx_threads_fts ON threads USING GIN(fts);
 CREATE INDEX IF NOT EXISTS idx_replies_thread ON replies(thread_id);
 CREATE INDEX IF NOT EXISTS idx_replies_reply_to ON replies(reply_to_id);
 

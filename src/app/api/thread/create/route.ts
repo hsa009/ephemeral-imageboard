@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { getBucketName, uploadDirect, getReadSignedUrl } from '@/lib/s3';
 import { hashIP } from '@/lib/ip-hash';
 import { verifyPoW, getClientIP } from '@/lib/pow';
+import { classifyNiche } from '@/lib/classifier';
 
 export async function POST(request: NextRequest) {
   try {
@@ -100,6 +101,10 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
+    // Classify niche using AI
+    console.log('[Thread-Create] Classifying niche...');
+    const niche = await classifyNiche(subject, comment);
+
     // Insert into database
     console.log('[Thread-Create] Inserting thread...');
     const { data, error } = await supabaseAdmin
@@ -110,6 +115,7 @@ export async function POST(request: NextRequest) {
         image_filename: imageFilename,
         username: username,
         author_ip,
+        niche,
       })
       .select()
       .single();
