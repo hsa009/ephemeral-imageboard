@@ -47,7 +47,6 @@ export default function GhostCounter({ onCountChange }: GhostCounterProps) {
       const { createClient } = await import("@supabase/supabase-js");
       const supabase = createClient(supabaseUrl, supabaseKey);
       
-      // Upsert presence row
       await supabase.from("presence").upsert({
         ghost_id: ghostId,
         last_seen_at: new Date().toISOString(),
@@ -89,11 +88,10 @@ export default function GhostCounter({ onCountChange }: GhostCounterProps) {
       if (!mountedRef.current) return;
       
       if (!supabase) {
-        setState({ status: 'error', count: 1 });
+        setState({ status: 'error', count: 0 });
         return;
       }
 
-      // Initial count
       const initialCount = await fetchGhostCount(supabase);
       if (!mountedRef.current) return;
       
@@ -101,12 +99,10 @@ export default function GhostCounter({ onCountChange }: GhostCounterProps) {
       setState({ status: 'connected', count: initialCount });
       onCountChange?.(initialCount, 0);
 
-      // Heartbeat every 60 seconds
       heartbeatRef.current = setInterval(async () => {
         if (!mountedRef.current) return;
         await updatePresence();
         
-        // Also fetch updated count
         const newCount = await fetchGhostCount(supabase);
         if (!mountedRef.current) return;
         
@@ -118,7 +114,6 @@ export default function GhostCounter({ onCountChange }: GhostCounterProps) {
         setState({ status: 'connected', count: newCount });
       }, HEARTBEAT_INTERVAL);
 
-      // Poll count more frequently (every 30s)
       pollRef.current = setInterval(async () => {
         if (!mountedRef.current) return;
         const newCount = await fetchGhostCount(supabase);
@@ -129,7 +124,7 @@ export default function GhostCounter({ onCountChange }: GhostCounterProps) {
           onCountChange?.(newCount, prevCount);
         }
         prevCountRef.current = newCount;
-        setState({ status: 'connected', count: newCount });
+        setState(prev => ({ ...prev, count: newCount }));
       }, 30000);
     };
 
@@ -142,24 +137,15 @@ export default function GhostCounter({ onCountChange }: GhostCounterProps) {
     };
   }, [updatePresence, fetchGhostCount, onCountChange]);
 
-  const getDisplay = () => {
-    if (state.status === 'connecting') {
-      return { icon: '○', count: '--', label: 'CONNECTING' };
-    }
-    if (state.status === 'connected') {
-      return { icon: '⚡', count: state.count.toString(), label: 'GHOSTS' };
-    }
-    return { icon: '⚡', count: state.count.toString(), label: 'GHOST MODE' };
-  };
-
-  const display = getDisplay();
+  const displayCount = state.status === 'connecting'
+    ? '---'
+    : String(state.count).padStart(3, '0');
 
   return (
     <div className="ghost-counter">
-      <span className="ghost-icon">{display.icon}</span>
-      <span className="ghost-count">{display.count}</span>
-      <span className="ghost-label">{display.label}</span>
-      {state.status === 'connected' && <span className="ghost-pulse" />}
+      <span className="ghost-ping" />
+      <span className="ghost-count">{displayCount}</span>
+      <span className="ghost-label">ghosts</span>
     </div>
   );
 }
