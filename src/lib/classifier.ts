@@ -28,47 +28,43 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       apiKey,
     });
 
-    console.log("[GHOST BRAIN] 🔌 Connecting to OpenRouter (stepfun/step-3.5-flash:free) with reasoning...");
+    const model = 'meta-llama/llama-3.1-8b-instruct';
+    console.log("[GHOST BRAIN] 🔌 Connecting to OpenRouter (" + model + ")...");
 
-    const apiResponse = await client.chat.completions.create({
-      model: 'stepfun/step-3.5-flash:free',
+    const response = await client.chat.completions.create({
+      model,
       messages: [
         {
+          role: 'system',
+          content: [
+            "You are a text classifier. Output exactly ONE word.",
+            "Rules:",
+            "- politics: Trump, Hitler, Biden, Harris, elections, war, geopolitics, government, democracy, voting, congress, senate, president, revolution",
+            "- finance: crypto, bitcoin, solana, trading, gold, stocks, markets, investing, economy, inflation",
+            "- gaming: roblox, fortnite, minecraft, xbox, playstation, nintendo, steam, esports, FPS, RPG, MMO, consoles",
+            "- tech: coding, python, javascript, hacking, hardware, software, AI, cybersecurity, linux, programming, developer, API",
+            "- random: does not match any above",
+            "",
+            "Output ONLY one lowercase word: tech, gaming, finance, politics, or random.",
+            "No punctuation. No explanation. No reasoning."
+          ].join("\n")
+        },
+        {
           role: 'user',
-          content: `Classify the following text into EXACTLY ONE category. Output ONLY a single lowercase word, nothing else.
-
-CATEGORIES AND KEYWORDS:
-- politics: Trump, Hitler, Biden, Harris, elections, war, geopolitics, world leaders, government, democracy, voting, congress, senate, president, prime minister, dictatorship, fascism, communism, socialism, revolution, coup, election
-- finance: crypto, bitcoin, BTC, solana, trading, gold, stocks, markets, investing, wall street, economy, inflation, interest rates, forex, bonds, dividends, portfolio, bull market, bear market
-- gaming: roblox, deadline, loadouts, gaming, consoles, FPS, fortnite, minecraft, xbox, playstation, nintendo, steam, esports, RPG, MMO, COD, battlefield, halo, zelda, GTA
-- tech: coding, python, javascript, hacking, hardware, dark web, software, AI, machine learning, cybersecurity, linux, windows, mac, programming, developer, API, database, cloud, blockchain, neural network
-- random: anything that does not clearly match the above four categories
-
-Text to classify:
-Subject: ${subject}
-Comment: ${comment}
-
-Remember: output EXACTLY ONE lowercase word from [tech, gaming, finance, politics, random]. No explanation. No punctuation. No reasoning.`
+          content: "Subject: " + subject + "\nComment: " + comment
         }
       ],
-      max_tokens: 200,
-      reasoning: { enabled: true },
-    } as any);
+      max_tokens: 5,
+      temperature: 0,
+    });
 
     console.log("[GHOST BRAIN] ✅ API connection successful. Response received.");
-    console.log("[GHOST BRAIN] 🔍 Full response object:", JSON.stringify(apiResponse, null, 2));
+    console.log("[GHOST BRAIN] 🔍 Full response object:", JSON.stringify(response, null, 2));
 
-    const choice = apiResponse.choices?.[0];
+    const choice = response.choices?.[0];
     console.log("[GHOST BRAIN] 🔍 Choice[0]:", JSON.stringify(choice, null, 2));
 
-    type ORChatMessage = (typeof apiResponse)['choices'][number]['message'] & {
-      reasoning_details?: unknown;
-    };
-    const message = choice?.message as ORChatMessage;
-
-    console.log("[GHOST BRAIN] 🔍 Reasoning details:", JSON.stringify(message?.reasoning_details));
-
-    const rawContent = message?.content;
+    const rawContent = choice?.message?.content;
     console.log("[GHOST BRAIN] 🔍 Raw content type:", typeof rawContent, "| Value:", JSON.stringify(rawContent));
 
     if (rawContent === null || rawContent === undefined) {
