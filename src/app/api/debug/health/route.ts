@@ -29,6 +29,8 @@ export async function GET() {
     IDRIVE_E2_BUCKET: !!process.env.IDRIVE_E2_BUCKET,
     IDRIVE_E2_ACCESS_KEY: !!process.env.IDRIVE_E2_ACCESS_KEY,
     IDRIVE_E2_SECRET_KEY: !!process.env.IDRIVE_E2_SECRET_KEY,
+    GROQ_API_KEY: !!process.env.GROQ_API_KEY,
+    OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY,
     MOD_API_KEY: !!process.env.MOD_API_KEY,
     CRON_SECRET: !!process.env.CRON_SECRET,
     IP_SALT: !!process.env.IP_SALT,
