@@ -595,7 +595,19 @@ export default function Home() {
           <div className="thread-view">
             <div className="thread-op">
               <div className="thread-op-header">
-                {selectedThread.image_filename && <img src={selectedThread.image_filename} alt="" className={`thread-op-image ${expandedImage === selectedThread.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === selectedThread.image_filename ? null : selectedThread.image_filename)} />}
+                {selectedThread.image_filename ? (
+                  <img src={selectedThread.image_filename} alt="" className={`thread-op-image ${expandedImage === selectedThread.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === selectedThread.image_filename ? null : selectedThread.image_filename)} />
+                ) : (
+                  <div className="fallback-container fallback-container--op">
+                    <img
+                      src="/images/:0null-logo.jpg.jpeg"
+                      alt=""
+                      className="fallback-logo"
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/:0null-logo.jpg.jpeg'; }}
+                    />
+                    <span className="fallback-text">{selectedThread.subject}</span>
+                  </div>
+                )}
                 <div className="thread-op-content">
                   <div className="thread-op-subject">{selectedThread.subject}</div>
                   <div className="thread-op-comment" dangerouslySetInnerHTML={{ __html: formatQuote(selectedThread.comment) }} />
@@ -765,7 +777,19 @@ export default function Home() {
         {threads.map(thread => (
             <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread)}>
               <VoidTimer lastBumpAt={thread.last_bumped_at} />
-              {thread.image_filename && <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />}
+              {thread.image_filename ? (
+                <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />
+              ) : (
+                <div className="fallback-container">
+                  <img
+                    src="/images/:0null-logo.jpg.jpeg"
+                    alt=""
+                    className="fallback-logo"
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/images/:0null-logo.jpg.jpeg'; }}
+                  />
+                  <span className="fallback-text">{thread.subject}</span>
+                </div>
+              )}
               <div className="thread-info">
                 {thread.niche && (
                   <div className="thread-niche">[ n: {thread.niche} ]</div>
