@@ -32,7 +32,7 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       messages: [
         {
           role: 'system',
-          content: "You are a 0null board-bot. RULE 1: If the text mentions Trump, Hitler, Biden, or War, the answer is 'politics'. RULE 2: Output ONLY the word: [tech, gaming, finance, politics, random]. No punctuation. No reasoning. Just the word."
+          content: "You are a 0null classification bot. CRITICAL RULE: If the user input mentions 'Trump', 'Hitler', 'Biden', or 'War', you MUST output the word 'politics'. TASK: Output ONLY one lowercase word from: [tech, gaming, finance, politics, random]. No reasoning. No punctuation. No chatter."
         },
         {
           role: 'user',
@@ -42,17 +42,18 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       max_tokens: 10,
     });
 
-    const raw = response.choices[0]?.message?.content || "random";
-    const finalNiche = raw.toLowerCase().trim().replace(/[^a-z]/g, "");
+    const rawOutput = response.choices[0]?.message?.content || "random";
+    const finalNiche = rawOutput.toLowerCase().trim().split(' ')[0].replace(/[^a-z]/g, "");
     
+    // Safety fallback
     const niche = VALID_NICHES.includes(finalNiche) ? finalNiche : 'random';
     
-    console.log("[GHOST BRAIN] Raw:", raw, "-> Final:", niche);
+    console.log("[GHOST BRAIN] Raw Output:", rawOutput, "-> Final:", niche);
     
     return { 
       niche, 
-      rawResponse: raw,
-      fullOutput: raw
+      rawResponse: rawOutput,
+      fullOutput: rawOutput
     };
 
   } catch (error) {
