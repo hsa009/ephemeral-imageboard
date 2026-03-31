@@ -12,46 +12,31 @@ const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
 
 export async function classifyNiche(subject: string, comment: string): Promise<ClassificationResult> {
   const defaultResult: ClassificationResult = { niche: 'random' };
-  const apiKey = process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.GITHUB_TOKEN;
 
   if (!apiKey) {
-    console.error("[GHOST BRAIN] ❌ NO API KEY FOUND — checked GROQ_API_KEY and OPENROUTER_API_KEY. Defaulting to 'random'.");
+    console.error("[GHOST BRAIN] ❌ NO API KEY FOUND — GITHUB_TOKEN not set. Defaulting to 'random'.");
     return defaultResult;
   }
 
-  console.log("[GHOST BRAIN] ✅ API Key loaded:", apiKey.substring(0, 8) + "...");
+  console.log("[GHOST BRAIN] ✅ GITHUB_TOKEN loaded:", apiKey.substring(0, 8) + "...");
   console.log("[GHOST BRAIN] 📥 Input — Subject:", JSON.stringify(subject), "Comment:", JSON.stringify(comment.substring(0, 100)));
 
   try {
     const client = new OpenAI({
-      baseURL: 'https://openrouter.ai/api/v1',
+      baseURL: 'https://models.inference.ai.azure.com',
       apiKey,
-      defaultHeaders: {
-        'HTTP-Referer': 'https://0null.pages.dev',
-        'X-OpenRouter-Title': '0null',
-      },
     });
 
-    const model = 'qwen/qwen3-coder:free';
-    console.log("[GHOST BRAIN] 🔌 Connecting to OpenRouter (" + model + ")...");
+    const model = 'gpt-4o-mini';
+    console.log("[GHOST BRAIN] 🔌 Connecting to GitHub Models API (" + model + ")...");
 
     const response = await client.chat.completions.create({
       model,
       messages: [
         {
           role: 'system',
-          content: [
-            "You are a text classifier. Output exactly ONE word.",
-            "Rules:",
-            "- politics: Trump, Hitler, Biden, Harris, elections, war, geopolitics, government, democracy, voting, congress, senate, president, revolution",
-            "- finance: crypto, bitcoin, solana, trading, gold, stocks, markets, investing, economy, inflation",
-            "- gaming: roblox, fortnite, minecraft, xbox, playstation, nintendo, steam, esports, FPS, RPG, MMO, consoles",
-            "- tech: coding, python, javascript, hacking, hardware, software, AI, cybersecurity, linux, programming, developer, API",
-            "- random: does not match any above",
-            "",
-            "Output ONLY one lowercase word: tech, gaming, finance, politics, or random.",
-            "No punctuation. No explanation. No reasoning."
-          ].join("\n")
+          content: "You are a classification bot for an anonymous imageboard.\nCRITICAL OVERRIDE: If the text mentions Trump, Hitler, Biden, Harris, elections, or war -> output: politics\nTASK: Output EXACTLY ONE lowercase word from this list: [tech, gaming, finance, politics, random].\nNO punctuation. NO reasoning. NO extra text."
         },
         {
           role: 'user',
