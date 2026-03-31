@@ -744,19 +744,19 @@ export default function Home() {
             <a href="/chat">Chat</a>
             <a href="#" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); }}>New Thread</a>
           </nav>
+          <div className="search-container">
+            <label className="search-label">search_void:</label>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </header>
       <div className="header-divider" />
-      <div className="search-container">
-        <label className="search-label">search_void:</label>
-        <input
-          type="text"
-          className="search-input"
-          placeholder="..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
       
       {/* Niche Navigation */}
       <div className="niche-nav">
