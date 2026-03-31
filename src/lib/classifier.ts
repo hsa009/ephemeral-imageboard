@@ -48,9 +48,20 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
     });
 
     const message1 = firstResponse.choices[0].message;
-    const reasoning = (message1 as ReasoningMessage)?.reasoning_details || '';
+    const rawReasoning = (message1 as any).reasoning_details;
+    let reasoningText = '';
     
-    console.log("[GHOST BRAIN] Turn 1 Reasoning:", reasoning);
+    if (rawReasoning) {
+      if (typeof rawReasoning === 'string') {
+        reasoningText = rawReasoning;
+      } else if (Array.isArray(rawReasoning)) {
+        reasoningText = rawReasoning.map((r: any) => r.text || r.reasoning || JSON.stringify(r)).join(' ');
+      } else if (typeof rawReasoning === 'object') {
+        reasoningText = rawReasoning.text || rawReasoning.reasoning || rawReasoning.content || JSON.stringify(rawReasoning);
+      }
+    }
+    
+    console.log("[GHOST BRAIN] Turn 1 Reasoning:", reasoningText);
     console.log("[GHOST BRAIN] Turn 1 Content:", message1.content);
 
     // Turn 2: Forced final answer
@@ -90,8 +101,8 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
     return { 
       niche, 
       rawResponse: finalContent, 
-      reasoning,
-      fullOutput: reasoning + ' ' + finalContent
+      reasoning: reasoningText,
+      fullOutput: reasoningText + ' ' + finalContent
     };
 
   } catch (error) {
