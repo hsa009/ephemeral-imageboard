@@ -28,44 +28,47 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       apiKey,
     });
 
-    console.log("[GHOST BRAIN] 🔌 Connecting to OpenRouter (google/gemini-2.0-flash-001)...");
+    console.log("[GHOST BRAIN] 🔌 Connecting to OpenRouter (stepfun/step-3.5-flash:free) with reasoning...");
 
-    const response = await client.chat.completions.create({
-      model: 'google/gemini-2.0-flash-001',
+    const apiResponse = await client.chat.completions.create({
+      model: 'stepfun/step-3.5-flash:free',
       messages: [
         {
-          role: 'system',
-          content: `You are the core classification engine for 0null, an anonymous terminal-style imageboard. Your only purpose is to read the user's subject and comment, then output exactly ONE word to categorize the thread.
-
-CRITICAL OVERRIDE RULES:
-1. If the text mentions ANY of these terms: Trump, Hitler, Biden, Harris, elections, war, geopolitics, or world leaders -> You MUST output: politics
-2. If the text mentions: crypto, bitcoin, BTC, solana, trading, gold, stocks, or markets -> You MUST output: finance
-3. If the text mentions: roblox, deadline, loadouts, gaming, consoles, or FPS -> You MUST output: gaming
-4. If the text mentions: coding, python, javascript, hacking, hardware, or dark web -> You MUST output: tech
-5. If the text does not strongly fit the above four categories -> You MUST output: random
-
-STRICT OUTPUT CONSTRAINTS:
-- You must output exactly ONE lowercase word from this exact list: [tech, gaming, finance, politics, random].
-- DO NOT output any punctuation (no periods, no brackets).
-- DO NOT output any reasoning, thinking, or explanation.
-- DO NOT say "The answer is..."
-- Just output the single word.`
-        },
-        {
           role: 'user',
-          content: `Subject: ${subject}\nComment: ${comment}`
+          content: `Classify the following text into EXACTLY ONE category. Output ONLY a single lowercase word, nothing else.
+
+CATEGORIES AND KEYWORDS:
+- politics: Trump, Hitler, Biden, Harris, elections, war, geopolitics, world leaders, government, democracy, voting, congress, senate, president, prime minister, dictatorship, fascism, communism, socialism, revolution, coup, election
+- finance: crypto, bitcoin, BTC, solana, trading, gold, stocks, markets, investing, wall street, economy, inflation, interest rates, forex, bonds, dividends, portfolio, bull market, bear market
+- gaming: roblox, deadline, loadouts, gaming, consoles, FPS, fortnite, minecraft, xbox, playstation, nintendo, steam, esports, RPG, MMO, COD, battlefield, halo, zelda, GTA
+- tech: coding, python, javascript, hacking, hardware, dark web, software, AI, machine learning, cybersecurity, linux, windows, mac, programming, developer, API, database, cloud, blockchain, neural network
+- random: anything that does not clearly match the above four categories
+
+Text to classify:
+Subject: ${subject}
+Comment: ${comment}
+
+Remember: output EXACTLY ONE lowercase word from [tech, gaming, finance, politics, random]. No explanation. No punctuation. No reasoning.`
         }
       ],
-      max_tokens: 10,
-    });
+      max_tokens: 200,
+      reasoning: { enabled: true },
+    } as any);
 
     console.log("[GHOST BRAIN] ✅ API connection successful. Response received.");
-    console.log("[GHOST BRAIN] 🔍 Full response object:", JSON.stringify(response, null, 2));
+    console.log("[GHOST BRAIN] 🔍 Full response object:", JSON.stringify(apiResponse, null, 2));
 
-    const choice = response.choices?.[0];
+    const choice = apiResponse.choices?.[0];
     console.log("[GHOST BRAIN] 🔍 Choice[0]:", JSON.stringify(choice, null, 2));
 
-    const rawContent = choice?.message?.content;
+    type ORChatMessage = (typeof apiResponse)['choices'][number]['message'] & {
+      reasoning_details?: unknown;
+    };
+    const message = choice?.message as ORChatMessage;
+
+    console.log("[GHOST BRAIN] 🔍 Reasoning details:", JSON.stringify(message?.reasoning_details));
+
+    const rawContent = message?.content;
     console.log("[GHOST BRAIN] 🔍 Raw content type:", typeof rawContent, "| Value:", JSON.stringify(rawContent));
 
     if (rawContent === null || rawContent === undefined) {
