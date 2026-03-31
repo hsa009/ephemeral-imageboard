@@ -323,6 +323,17 @@ export default function Home() {
     }
   };
 
+  const timeAgo = (dateStr: string) => {
+    const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `${days}d`;
+  };
+
   useEffect(() => { generatePoW().then(setCurrentPoW); }, []);
 
   const fetchThreads = async () => {
@@ -521,12 +532,12 @@ export default function Home() {
             }} />
           )}
           <div className="reply-header">
+            {reply.reply_to_id && <span className="quote-box">&gt;&gt;#{reply.reply_to_id}</span>}
             {myPost && <span className="you-badge">You</span>}
-            {reply.username && reply.username !== 'Anonymous' && <span className="username-display">{reply.username} • </span>}
+            {reply.username && reply.username !== 'Anonymous' && <span className="username-display">{reply.username}</span>}
             <span>#{reply.id}</span>
-            <span>{new Date(reply.created_at).toLocaleString()}</span>
+            <span>{timeAgo(reply.created_at)}</span>
           </div>
-          {reply.reply_to_id && <div className="quote-box">In reply to #{reply.reply_to_id}</div>}
           <div className="reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
           {reply.image_filename && <img src={reply.image_filename} alt="" className={`reply-image ${expandedImage === reply.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)} />}
           <div className="reply-footer">
