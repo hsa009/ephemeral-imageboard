@@ -6,37 +6,52 @@ interface ClassificationResult {
   rawResponse?: string;
   reasoning?: string;
   fullOutput?: string;
+  latency_ms?: number;
+  status?: string;
+  error_msg?: string;
+  fallback?: string;
 }
 
 const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
 
 export async function classifyNiche(subject: string, comment: string): Promise<ClassificationResult> {
-  const defaultResult: ClassificationResult = { niche: 'random' };
   const apiKey = process.env.GITHUB_TOKEN;
 
   if (!apiKey) {
     console.error("[GHOST BRAIN] ❌ NO API KEY FOUND — GITHUB_TOKEN not set. Defaulting to 'random'.");
-    return defaultResult;
+    return { niche: 'random', status: 'error', error_msg: 'GITHUB_TOKEN not set', fallback: 'random' };
   }
 
   console.log("[GHOST BRAIN] ✅ GITHUB_TOKEN loaded:", apiKey.substring(0, 8) + "...");
   console.log("[GHOST BRAIN] 📥 Input — Subject:", JSON.stringify(subject), "Comment:", JSON.stringify(comment.substring(0, 100)));
 
+  const client = new OpenAI({
+    baseURL: 'https://models.inference.ai.azure.com',
+    apiKey,
+  });
+
+  const startTime = Date.now();
+  console.log(`[GHOST BRAIN] 📡 Connecting to GitHub Models API for subject: "${subject}"...`);
+
   try {
-    const client = new OpenAI({
-      baseURL: 'https://models.inference.ai.azure.com',
-      apiKey,
-    });
-
-    const model = 'gpt-4o-mini';
-    console.log("[GHOST BRAIN] 🔌 Connecting to GitHub Models API (" + model + ")...");
-
     const response = await client.chat.completions.create({
-      model,
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
-          content: "You are a classification bot for an anonymous imageboard.\nCRITICAL OVERRIDE: If the text mentions Trump, Hitler, Biden, Harris, elections, or war -> output: politics\nTASK: Output EXACTLY ONE lowercase word from this list: [tech, gaming, finance, politics, random].\nNO punctuation. NO reasoning. NO extra text."
+          content: `You are the classification engine for an anonymous imageboard. Categorize the user's post into exactly ONE of these niches: [tech, gaming, finance, politics, random].
+
+politics: government, geopolitics, nations (e.g., Iran, USA), wars, elections, political figures.
+
+gaming: video games, PC setups, consoles, loadouts, gaming culture.
+
+tech: programming, hacking, hardware, software, dark web.
+
+finance: crypto, markets, trading, wealth, stocks.
+
+random: anything that does not strongly fit the above.
+
+OUTPUT STRICTLY ONE LOWERCASE WORD. NO punctuation. NO explanations.`
         },
         {
           role: 'user',
@@ -47,48 +62,33 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
       temperature: 0,
     });
 
-    console.log("[GHOST BRAIN] ✅ API connection successful. Response received.");
-    console.log("[GHOST BRAIN] 🔍 Full response object:", JSON.stringify(response, null, 2));
+    const latency = Date.now() - startTime;
 
-    const choice = response.choices?.[0];
-    console.log("[GHOST BRAIN] 🔍 Choice[0]:", JSON.stringify(choice, null, 2));
-
-    const rawContent = choice?.message?.content;
-    console.log("[GHOST BRAIN] 🔍 Raw content type:", typeof rawContent, "| Value:", JSON.stringify(rawContent));
-
-    if (rawContent === null || rawContent === undefined) {
-      console.error("[GHOST BRAIN] ❌ Content is null/undefined. Finish reason:", choice?.finish_reason, "| Defaulting to 'random'.");
-      return { niche: 'random', rawResponse: String(rawContent), fullOutput: String(rawContent) };
-    }
-
-    if (typeof rawContent !== 'string') {
-      console.error("[GHOST BRAIN] ❌ Content is not a string, it's:", typeof rawContent, "| Value:", JSON.stringify(rawContent));
-      return { niche: 'random', rawResponse: String(rawContent), fullOutput: String(rawContent) };
-    }
-
-    const rawOutput = rawContent;
+    const rawOutput = response.choices[0]?.message?.content || "random";
     const finalNiche = rawOutput.toLowerCase().trim().split(' ')[0].replace(/[^a-z]/g, "");
     const niche = VALID_NICHES.includes(finalNiche) ? finalNiche : 'random';
 
-    console.log("[GHOST BRAIN] 🧠 Extraction steps:");
-    console.log("[GHOST BRAIN]    rawOutput:", JSON.stringify(rawOutput));
-    console.log("[GHOST BRAIN]    toLowerCase+trim+split[0]:", JSON.stringify(rawOutput.toLowerCase().trim().split(' ')[0]));
-    console.log("[GHOST BRAIN]    after regex:", JSON.stringify(finalNiche));
-    console.log("[GHOST BRAIN]    isValid:", VALID_NICHES.includes(finalNiche), "| Final niche:", niche);
+    console.log(`[GHOST BRAIN] 🟢 Success! Latency: ${latency}ms | AI Said: "${rawOutput}" | Extracted: "${finalNiche}"`);
 
     return {
       niche,
       rawResponse: rawOutput,
-      fullOutput: rawOutput
+      fullOutput: rawOutput,
+      latency_ms: latency,
+      status: 'success',
     };
 
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error("[GHOST BRAIN] ❌ API call FAILED:", errorMsg);
-    if (error instanceof Error && 'status' in error) {
-      console.error("[GHOST BRAIN] ❌ HTTP Status:", (error as any).status);
-    }
-    console.error("[GHOST BRAIN] ❌ Defaulting to 'random'.");
-    return defaultResult;
+  } catch (error: any) {
+    const latency = Date.now() - startTime;
+    const errorMsg = error?.message || String(error);
+    console.error(`[GHOST BRAIN] 🔴 API CONNECTION FAILED after ${latency}ms:`, errorMsg);
+
+    return {
+      niche: 'random',
+      status: 'error',
+      error_msg: errorMsg,
+      latency_ms: latency,
+      fallback: 'random',
+    };
   }
 }

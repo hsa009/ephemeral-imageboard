@@ -132,14 +132,17 @@ export async function POST(request: NextRequest) {
 
     console.log('[Thread-Create] Success! Thread ID:', data.id);
     console.log('[GHOST BRAIN] Bridge to browser - Final niche:', niche);
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       thread: data,
       debug: {
+        status: classification.status,
         niche_found: niche,
-        rawAIOutput: classification.rawResponse,
-        reasoning: classification.reasoning,
-        fullOutput: classification.fullOutput,
+        rawOutput: classification.rawResponse,
+        finalNiche: niche,
+        latency_ms: classification.latency_ms,
+        error_msg: classification.error_msg,
+        fallback: classification.fallback,
       }
     });
     
