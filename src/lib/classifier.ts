@@ -1,10 +1,7 @@
 // Build trigger - forced fresh deploy
 // Two-turn conversation classifier for forced final classification
 import OpenAI from 'openai';
-
-interface ReasoningMessage extends OpenAI.ChatCompletionMessage {
-  reasoning_details?: string;
-}
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface ClassificationResult {
   niche: string;
