@@ -26,9 +26,13 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
     const client = new OpenAI({
       baseURL: 'https://openrouter.ai/api/v1',
       apiKey,
+      defaultHeaders: {
+        'HTTP-Referer': 'https://0null.pages.dev',
+        'X-OpenRouter-Title': '0null',
+      },
     });
 
-    const model = 'meta-llama/llama-3.1-8b-instruct';
+    const model = 'qwen/qwen3-coder:free';
     console.log("[GHOST BRAIN] 🔌 Connecting to OpenRouter (" + model + ")...");
 
     const response = await client.chat.completions.create({
