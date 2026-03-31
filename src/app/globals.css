@@ -524,30 +524,26 @@ header h1 span {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  padding: 1px 3px;
-  font-size: 0.65rem;
+  padding: 2px 4px;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: monospace;
-  filter: grayscale(1);
-  opacity: 0.4;
+  opacity: 1;
 }
 
 .reaction-btn:hover:not(:disabled) {
-  filter: grayscale(0);
-  opacity: 1;
   color: var(--accent);
 }
 
 .reaction-btn:disabled,
 .reaction-btn.reacted {
-  filter: grayscale(1);
-  opacity: 0.5;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
 .reaction-emoji {
-  font-size: 0.7rem;
+  font-size: 0.95rem;
   line-height: 1;
 }
 
