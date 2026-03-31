@@ -31,6 +31,7 @@ export async function GET() {
     IDRIVE_E2_SECRET_KEY: !!process.env.IDRIVE_E2_SECRET_KEY,
     GROQ_API_KEY: !!process.env.GROQ_API_KEY,
     OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY,
+    GITHUB_TOKEN: !!process.env.GITHUB_TOKEN,
     MOD_API_KEY: !!process.env.MOD_API_KEY,
     CRON_SECRET: !!process.env.CRON_SECRET,
     IP_SALT: !!process.env.IP_SALT,
