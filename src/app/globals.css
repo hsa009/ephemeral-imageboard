@@ -490,6 +490,23 @@ header h1 span {
   animation: pulse 1s infinite;
 }
 
+.loading-terminal {
+  text-align: center;
+  padding: 40px;
+  color: var(--accent);
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.9rem;
+}
+
+.loading-cursor {
+  animation: blink 0.7s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 .reactions {
   display: flex;
   flex-wrap: wrap;

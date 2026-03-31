@@ -178,6 +178,7 @@ export default function Home() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [replyImage, setReplyImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
+  const [repliesLoading, setRepliesLoading] = useState(false);
   const [powLoading, setPowLoading] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [previewPost, setPreviewPost] = useState<{ x: number; y: number; content: string } | null>(null);
@@ -198,6 +199,8 @@ export default function Home() {
   const createTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
+    setThreads([]);
+    setLoading(true);
     fetchThreads();
     const handleScroll = () => setShowFab(window.scrollY > 300);
     window.addEventListener("scroll", handleScroll);
@@ -342,10 +345,12 @@ export default function Home() {
   };
 
   const fetchReplies = async (threadId: number) => {
+    setRepliesLoading(true);
     try {
       const res = await fetch(`/api/thread/${threadId}`);
       if (res.ok) { const data = await res.json(); setReplies(data.replies || []); }
     } catch (e) { console.error("Failed to fetch replies:", e); }
+    finally { setRepliesLoading(false); }
   };
 
   const handleCreateThread = async (e: React.FormEvent) => {
@@ -632,7 +637,13 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            {renderReplyTree(replyTree)}
+            {repliesLoading ? (
+              <div className="loading-terminal">
+                <span className="loading-cursor">█</span> fetching replies from the void...
+              </div>
+            ) : (
+              renderReplyTree(replyTree)
+            )}
             {pendingReplies.map(reply => <div key={reply.id} className="reply pending"><div className="reply-header"><span>Posting...</span></div><div className="reply-content">{reply.comment}</div></div>)}
             <div className="reply-form">
               {replyingTo && <div className="reply-indicator">Replying to #{replyingTo.id} <button onClick={() => setReplyingTo(null)} className="cancel-reply">X</button></div>}
@@ -773,39 +784,46 @@ export default function Home() {
       </div>
 
       {/* Thread Catalog */}
-      <div className="catalog">
-        {threads.map(thread => (
-            <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread)}>
-              <VoidTimer lastBumpAt={thread.last_bumped_at} />
-              {thread.image_filename ? (
-                <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />
-              ) : (
-                <div className="fallback-container">
-                  <img
-                    src="/images/:0null-logo.jpg.jpeg"
-                    alt=""
-                    className="fallback-logo"
-                    onError={(e) => { (e.target as HTMLImageElement).src = '/images/:0null-logo.jpg.jpeg'; }}
-                  />
-                  <span className="fallback-text">{thread.subject}</span>
+      {loading ? (
+        <div className="loading-terminal">
+          <span className="loading-cursor">█</span> fetching threads from the void...
+        </div>
+      ) : (
+        <>
+          <div className="catalog">
+            {threads.map(thread => (
+                <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread)}>
+                  <VoidTimer lastBumpAt={thread.last_bumped_at} />
+                  {thread.image_filename ? (
+                    <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />
+                  ) : (
+                    <div className="fallback-container">
+                      <img
+                        src="/images/:0null-logo.jpg.jpeg"
+                        alt=""
+                        className="fallback-logo"
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/images/:0null-logo.jpg.jpeg'; }}
+                      />
+                      <span className="fallback-text">{thread.subject}</span>
+                    </div>
+                  )}
+                  <div className="thread-info">
+                    {thread.niche && (
+                      <div className="thread-niche">[ n: {thread.niche} ]</div>
+                    )}
+                    <div className="thread-subject">{thread.subject}</div>
+                    <div className="thread-meta">{thread.bump_count} replies • {new Date(thread.last_bumped_at).toLocaleTimeString()}</div>
+                  </div>
                 </div>
-              )}
-              <div className="thread-info">
-                {thread.niche && (
-                  <div className="thread-niche">[ n: {thread.niche} ]</div>
-                )}
-                <div className="thread-subject">{thread.subject}</div>
-                <div className="thread-meta">{thread.bump_count} replies • {new Date(thread.last_bumped_at).toLocaleTimeString()}</div>
-              </div>
-            </div>
-          ))}
-      </div>
-      {loading && <div className="loading">Loading...</div>}
-      {!loading && threads.length === 0 && (searchQuery || activeNiche !== 'all') && (
-        <div className="empty-state">[!] NO DATA FOUND IN THE VOID</div>
-      )}
-      {!loading && threads.length === 0 && !searchQuery && activeNiche === 'all' && (
-        <div className="loading">No threads yet. Be the first to post!</div>
+              ))}
+          </div>
+          {threads.length === 0 && (searchQuery || activeNiche !== 'all') && (
+            <div className="empty-state">[!] NO DATA FOUND IN THE VOID</div>
+          )}
+          {threads.length === 0 && !searchQuery && activeNiche === 'all' && (
+            <div className="loading">No threads yet. Be the first to post!</div>
+          )}
+        </>
       )}
       <button className="fab" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><PlusIcon /></button>
     </div>
