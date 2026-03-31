@@ -32,11 +32,11 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
 
     // Turn 1: Initial reasoning call
     const firstResponse = await client.chat.completions.create({
-      model: 'arcee-ai/trinity-mini:free',
+      model: 'qwen/qwen3.6-plus-preview:free',
       messages: [
         { 
           role: 'user', 
-          content: `Analyze and reason through this post. What category does it belong to? Subject: ${subject} Comment: ${comment}` 
+          content: `Analyze this post and reason through which niche it belongs to: [tech, gaming, finance, politics, random]. If it mentions Trump, Hitler, or War, it is politics. Subject: ${subject} Comment: ${comment}` 
         }
       ],
       // @ts-expect-error - reasoning not in SDK types
@@ -65,11 +65,11 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
     console.log("[GHOST BRAIN] Turn 2: Requesting final classification...");
     
     const finalResponse = await client.chat.completions.create({
-      model: 'arcee-ai/trinity-mini:free',
+      model: 'qwen/qwen3.6-plus-preview:free',
       messages: [
         { 
           role: 'user', 
-          content: `Analyze and reason through this post. What category does it belong to? Subject: ${subject} Comment: ${comment}` 
+          content: `Analyze this post and reason through which niche it belongs to: [tech, gaming, finance, politics, random]. If it mentions Trump, Hitler, or War, it is politics. Subject: ${subject} Comment: ${comment}` 
         },
         { 
           role: 'assistant', 
@@ -79,21 +79,20 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
         },
         { 
           role: 'user', 
-          content: "Based on your reasoning, output EXACTLY one word from this list: [tech, gaming, finance, politics, random]. If it's about Trump, Hitler, or War, it must be 'politics'. Output ONLY the word, no explanation." 
+          content: "Are you sure? Think carefully. Now output ONLY the final lowercase word inside double brackets, like this: [[politics]]." 
         }
       ],
       max_tokens: 20,
     });
 
-    const finalContent = finalResponse.choices[0]?.message?.content?.trim().toLowerCase() || '';
+    const finalContent = finalResponse.choices[0]?.message?.content || '';
     
-    console.log("[GHOST BRAIN] Turn 2 Final Answer:", finalContent);
-    console.log("[GHOST BRAIN] Full Final Response:", JSON.stringify(finalResponse.choices[0], null, 2));
-
-    // Extract valid niche
-    const niche = VALID_NICHES.includes(finalContent) ? finalContent : 'random';
+    // Extract from double brackets [[word]]
+    const match = finalContent.match(/\[\[(tech|gaming|finance|politics|random)\]\]/i);
+    const niche = match ? match[1].toLowerCase() : 'random';
     
-    console.log("[GHOST BRAIN] Final Niche Selected:", niche);
+    console.log("[GHOST BRAIN] Turn 2 Response:", finalContent);
+    console.log("[GHOST BRAIN] Extracted Niche:", niche);
     
     return { 
       niche, 
