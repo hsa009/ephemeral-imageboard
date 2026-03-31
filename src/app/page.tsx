@@ -638,9 +638,7 @@ export default function Home() {
               </div>
             </div>
             {repliesLoading ? (
-              <div className="loading-terminal">
-                <span className="loading-cursor">█</span> fetching replies from the void...
-              </div>
+              <div className="loading">Loading</div>
             ) : (
               renderReplyTree(replyTree)
             )}
@@ -785,9 +783,7 @@ export default function Home() {
 
       {/* Thread Catalog */}
       {loading ? (
-        <div className="loading-terminal">
-          <span className="loading-cursor">█</span> fetching threads from the void...
-        </div>
+        <div className="loading">Loading</div>
       ) : (
         <>
           <div className="catalog">
