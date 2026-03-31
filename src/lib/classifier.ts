@@ -12,12 +12,15 @@ const VALID_NICHES = ['tech', 'gaming', 'finance', 'politics', 'random'];
 
 export async function classifyNiche(subject: string, comment: string): Promise<ClassificationResult> {
   const defaultResult: ClassificationResult = { niche: 'random' };
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY;
   
   if (!apiKey) {
     console.log("[GHOST BRAIN] No API key, defaulting to random");
     return defaultResult;
   }
+
+  console.log("[GHOST BRAIN] API Key exists:", !!apiKey);
+  console.log("[GHOST BRAIN] API Key prefix:", apiKey.substring(0, 8));
 
   try {
     const client = new OpenAI({
@@ -43,6 +46,7 @@ export async function classifyNiche(subject: string, comment: string): Promise<C
     });
 
     const rawOutput = response.choices[0]?.message?.content || "random";
+    console.log("[GHOST BRAIN] Full AI Response:", JSON.stringify(response.choices[0], null, 2));
     const finalNiche = rawOutput.toLowerCase().trim().split(' ')[0].replace(/[^a-z]/g, "");
     
     // Safety fallback
