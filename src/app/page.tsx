@@ -514,23 +514,13 @@ export default function Home() {
       const showCollapse = depth === 0 && childCount >= 5;
       const myPost = isMyPost(reply.id);
       const hasChildren = reply.children && reply.children.length > 0;
-      const isLastChild = index === nodes.length - 1;
+      const depthClass = depth > 0 ? `depth-${Math.min(depth, 3)}` : '';
       
       return (
-        <div key={reply.id} className={`reply ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`} style={{ 
-          marginLeft: depth > 0 ? '24px' : 0,
+        <div key={reply.id} className={`reply ${depthClass} ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`} style={{ 
+          marginLeft: depth > 0 ? '16px' : 0,
           position: 'relative'
         }}>
-          {depth > 0 && (
-            <div className="reply-thread-line" style={{
-              position: 'absolute',
-              left: '-20px',
-              top: 0,
-              bottom: isLastChild && !hasChildren ? '50%' : 0,
-              width: '2px',
-              background: 'var(--border)'
-            }} />
-          )}
           <div className="reply-header">
             {reply.reply_to_id && <span className="quote-box">&gt;&gt;#{reply.reply_to_id}</span>}
             {myPost && <span className="you-badge">You</span>}
@@ -553,7 +543,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <button className="reply-action-btn" onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>Reply</button>
+            <button className="reply-action-btn" onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>[ reply ]</button>
           </div>
           {showCollapse && !isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Hide {childCount - 3} more replies</button>}
           {showCollapse && isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Show {childCount} replies</button>}
