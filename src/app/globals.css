@@ -2282,6 +2282,41 @@ header h1 span {
   color: #00D1FF;
 }
 
+/* Cinema Metadata Colors */
+.cinema-meta-user {
+  color: #00D1FF;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.65rem;
+}
+
+.cinema-meta-void {
+  color: #71717a;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.65rem;
+}
+
+.cinema-video-info {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.6rem;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.cinema-video-meta {
+  display: flex;
+  gap: 8px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.65rem;
+  margin-bottom: 8px;
+}
+
 /* Cinema Video Bottom Bar */
 .cinema-video-bottom-bar {
   position: absolute;

@@ -359,8 +359,8 @@ export default function CinemaPage() {
                 </div>
               )}
               <div className="cinema-video-info">
-                <span className="cinema-video-id">#{video.id}</span>
-                {video.niche && <span className="cinema-video-niche">[ n: {video.niche} ]</span>}
+                <span className="cinema-meta-id">[#{video.id}]</span>
+                <span className="cinema-meta-void">[VOID_IN: {redactTime(video.created_at)}]</span>
               </div>
             </div>
           ))
@@ -380,14 +380,12 @@ export default function CinemaPage() {
         {currentVideo ? (
           <>
             <div className="cinema-comments-header">
-              <div className="cinema-section-label">[ SIGNAL_METADATA ]</div>
+              <div className="cinema-section-label">[ SIGNAL_COMMENTS ]</div>
               <div className="cinema-video-subject">{currentVideo.subject}</div>
               <div className="cinema-video-meta">
-                <span className="cinema-user-id">[{currentVideo.username || 'Anonymous'}]</span>
-                <span className="cinema-video-id">#{currentVideo.id}</span>
-                {currentVideo.niche && (
-                  <span className="cinema-video-niche">[ n: {currentVideo.niche} ]</span>
-                )}
+                <span className="cinema-meta-user">[{currentVideo.username || 'Anonymous'}]</span>
+                <span className="cinema-meta-id">[#{currentVideo.id}]</span>
+                <span className="cinema-meta-void">[VOID_IN: {redactTime(currentVideo.created_at)}]</span>
               </div>
               <button 
                 className="cinema-reply-toggle"
