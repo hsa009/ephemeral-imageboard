@@ -557,10 +557,10 @@ export default function Home() {
           <div className="reply-header">
             {reply.reply_to_id && <span className="quote-box">&gt;&gt;#{reply.reply_to_id}</span>}
             {reply.username && reply.username !== 'Anonymous' && (
-              <span className="username-display" style={{ color: `hsl(${(reply.id * 137) % 360}, 70%, 65%)` }}>{reply.username}</span>
+              <span className="username-display">{reply.username}</span>
             )}
             {myPost && <span className="meta-pill meta-pill--you">You</span>}
-            <span className="meta-pill" dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
+            <span className="meta-pill post-id" dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
             <span className="meta-pill">{redactTime(reply.created_at)}</span>
           </div>
           <div className="reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
