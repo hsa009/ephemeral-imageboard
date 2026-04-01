@@ -93,7 +93,7 @@ export default function CinemaPage() {
   const [replyingTo, setReplyingTo] = useState<{ id: number; comment: string } | null>(null);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
   const [showConsole, setShowConsole] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -113,7 +113,7 @@ export default function CinemaPage() {
     fetchThreads();
     try {
       const stored = localStorage.getItem('0null_sound_muted');
-      const isMuted = stored !== 'false';
+      const isMuted = stored === 'true';
       setMuted(isMuted);
       setShowOverlay(isMuted);
     } catch {}
@@ -368,9 +368,9 @@ export default function CinemaPage() {
             {showOverlay && index === currentIndex && (
               <div className="cinema-signal-overlay" onClick={enableAudio}>
                 <div className="cinema-signal-content">
-                  <span className="cinema-signal-icon">📡</span>
-                  <span className="cinema-signal-text">SIGNAL INTERCEPTION</span>
-                  <span className="cinema-signal-subtext">CLICK TO JOIN</span>
+                  <span className="cinema-signal-icon">🔓</span>
+                  <span className="cinema-signal-text">ENCRYPTED SIGNAL DETECTED</span>
+                  <span className="cinema-signal-subtext">CLICK TO DECODE</span>
                 </div>
               </div>
             )}
@@ -397,19 +397,17 @@ export default function CinemaPage() {
           <>
             <div className="cinema-console-header">
               <div className="cinema-subject">{currentThread.subject.toUpperCase()}</div>
-              <div className="cinema-meta-row">
-                <span className="cinema-meta-id">#{currentThread.id}</span>
-                {currentThread.niche && (
-                  <span className="cinema-meta-niche">[ n: {currentThread.niche} ]</span>
-                )}
-                <span className="cinema-meta-timer">[ VOID_IN: {getTimeUntilExpiry(currentThread.last_bumped_at)} ]</span>
+              <div className="cinema-signal-stats">
+                <span className="cinema-stat">[ SIGNAL_STRENGTH: {Math.floor(Math.random() * 20 + 80)}% ]</span>
+                <span className="cinema-stat orange">[ BURNING_IN: {getTimeUntilExpiry(currentThread.last_bumped_at)} ]</span>
+                <span className="cinema-stat zinc">[ LOC: #{currentThread.id} ]</span>
               </div>
               <div className="cinema-console-actions">
                 <button 
                   className="cinema-action-btn"
                   onClick={() => setMuted(!muted)}
                 >
-                  {muted ? '🔇 Unmute' : '🔊 Mute'}
+                  {muted ? '🔇 Muted' : '🔊 Live'}
                 </button>
                 <button 
                   className="cinema-action-btn primary"
@@ -423,7 +421,7 @@ export default function CinemaPage() {
             {/* Reply Stream */}
             <div className="cinema-reply-stream">
               {repliesLoading ? (
-                <div className="cinema-loading-small">Loading replies...</div>
+                <div className="cinema-loading-small">Decoding stream...</div>
               ) : (
                 renderReplyTree(buildReplyTree(replies))
               )}

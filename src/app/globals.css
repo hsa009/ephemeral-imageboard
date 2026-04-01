@@ -1763,7 +1763,7 @@ header h1 span {
 }
 
 .cinema-video-feed {
-  flex: 0 0 70%;
+  flex: 0 0 75%;
   height: 100%;
   border: 1px solid #27272a;
   border-radius: 12px;
@@ -1771,17 +1771,19 @@ header h1 span {
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   scrollbar-width: none;
+  box-shadow: 0 0 30px rgba(0, 209, 255, 0.1);
 }
 
 .cinema-video-feed::-webkit-scrollbar {
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .cinema-video-feed {
     flex: none;
-    height: 50vh;
+    height: 100%;
     width: 100%;
+    border-radius: 0;
   }
 }
 
@@ -1817,21 +1819,31 @@ header h1 span {
 }
 
 .cinema-console {
-  flex: 0 0 30%;
+  flex: 0 0 25%;
   background: #0A0A0B;
   border: 1px solid #27272a;
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
+  .cinema-layout {
+    flex-direction: column;
+  }
+  
   .cinema-console {
+    display: none;
     flex: none;
     width: 100%;
-    min-height: 50vh;
+    height: 50%;
+    border-radius: 0;
+  }
+  
+  .cinema-console.visible {
+    display: flex;
   }
 }
 
@@ -1868,6 +1880,27 @@ header h1 span {
 
 .cinema-meta-timer {
   color: #00D1FF;
+}
+
+.cinema-signal-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.6rem;
+  margin-bottom: 12px;
+}
+
+.cinema-stat {
+  color: #00D1FF;
+}
+
+.cinema-stat.orange {
+  color: #D97706;
+}
+
+.cinema-stat.zinc {
+  color: #71717a;
 }
 
 .cinema-console-actions {
@@ -2187,18 +2220,24 @@ header h1 span {
 .cinema-console-toggle {
   display: none;
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #0A0A0B;
-  border: 1px solid #27272a;
+  bottom: 24px;
+  right: 24px;
+  background: rgba(10, 10, 11, 0.9);
+  border: 1px solid #00D1FF;
   color: #00D1FF;
-  padding: 12px 20px;
+  padding: 14px 24px;
   border-radius: 8px;
   font-family: "Courier New", Courier, monospace;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   cursor: pointer;
   z-index: 200;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.3);
+  animation: console-pulse 2s ease-in-out infinite;
+}
+
+@keyframes console-pulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(0, 209, 255, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(0, 209, 255, 0.5); }
 }
 
 @media (max-width: 1024px) {
