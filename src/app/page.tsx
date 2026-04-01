@@ -199,6 +199,18 @@ export default function Home() {
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const createTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-scroll to reply form when user clicks Reply
+  const handleSetReplyingTo = (data: { id: number; comment: string }) => {
+    setReplyingTo(data);
+    setTimeout(() => {
+      const replyForm = document.querySelector('.reply-form');
+      if (replyForm) {
+        replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        replyTextareaRef.current?.focus();
+      }
+    }, 100);
+  };
+
   useEffect(() => {
     setThreads([]);
     setLoading(true);
@@ -285,6 +297,15 @@ export default function Home() {
   const addReaction = async (type: string, id: number, emoji: string) => {
     const isAlreadyReacted = hasReacted(type, id, emoji);
     
+    // Prevent multiple rapid clicks
+    const key = `${type}_${id}_${emoji}`;
+    const inProgress = (window as unknown as { __reactionInProgress?: Record<string, boolean> }).__reactionInProgress;
+    if (inProgress?.[key]) return;
+    (window as unknown as { __reactionInProgress: Record<string, boolean> }).__reactionInProgress = { 
+      ...(inProgress || {}), 
+      [key]: true 
+    };
+    
     // Optimistic UI: update immediately
     const updateReactions = (items: (Thread | Reply)[], targetId: number): (Thread | Reply)[] => {
       return items.map(item => {
@@ -337,6 +358,11 @@ export default function Home() {
         setThreads(prev => rollbackUpdate(prev, id) as Thread[]);
       } else {
         setReplies(prev => rollbackUpdate(prev, id) as Reply[]);
+      }
+    } finally {
+      const win = window as unknown as { __reactionInProgress: Record<string, boolean> };
+      if (win.__reactionInProgress) {
+        delete win.__reactionInProgress[key];
       }
     }
   };
@@ -550,7 +576,7 @@ export default function Home() {
       return (
         <div key={reply.id} className={`reply ${depthClass} ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`}>
           <div className="quick-actions">
-            <button className="quick-action-btn" onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>Reply</button>
+            <button className="quick-action-btn" onClick={() => handleSetReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>Reply</button>
             <button className="quick-action-btn" onClick={() => navigator.clipboard.writeText(`>>#${reply.id}`)}>Link</button>
             <button className="quick-action-btn">Report</button>
           </div>
@@ -697,7 +723,7 @@ export default function Home() {
               {replyingTo && <div className="reply-indicator">Replying to #{replyingTo.id} <button onClick={() => setReplyingTo(null)} className="cancel-reply">X</button></div>}
               <form onSubmit={handleReply}>
                 <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} className="username-input" />
-                <textarea placeholder="Write your reply..." value={replyComment} onChange={(e) => setReplyComment(e.target.value)} required />
+                <textarea ref={replyTextareaRef} placeholder="Write your reply..." value={replyComment} onChange={(e) => setReplyComment(e.target.value)} required />
                 <div className="form-actions">
                   <div className="file-input"><label><input type="file" accept="image/*" onChange={(e) => setReplyImage(e.target.files?.[0] || null)} /></label></div>
                   <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>{powLoading ? "Verifying..." : loading ? "Posting..." : "Reply"}</button>
