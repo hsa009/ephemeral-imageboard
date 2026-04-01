@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import GhostCounter from "@/components/GhostCounter";
 import VoidTimer from "@/components/VoidTimer";
+import PulseSidebar from "@/components/PulseSidebar";
 import { useSound, playSuccess, playError, playGhost } from "@/hooks/useSound";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { isThreadExpired } from "@/components/VoidTimer";
@@ -507,6 +508,14 @@ export default function Home() {
     return roots;
   }, [replies]);
 
+  const handlePulseSelect = (threadId: number) => {
+    const thread = threads.find(t => t.id === threadId);
+    if (thread) {
+      setSelectedThread(thread);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const renderReplyTree = (nodes: (Reply & { children: Reply[] })[], depth = 0) => {
     return nodes.map((reply, index) => {
       const isCollapsed = collapsedReplies[reply.id];
@@ -871,6 +880,7 @@ export default function Home() {
         </>
       )}
       <button className="fab" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><PlusIcon /></button>
+      <PulseSidebar onSelectThread={handlePulseSelect} />
     </div>
   );
 }
