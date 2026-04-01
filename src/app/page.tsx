@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import GhostCounter from "@/components/GhostCounter";
 import VoidTimer from "@/components/VoidTimer";
-import PulseSidebar from "@/components/PulseSidebar";
 import { useSound, playSuccess, playError, playGhost } from "@/hooks/useSound";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { isThreadExpired } from "@/components/VoidTimer";
@@ -193,6 +192,7 @@ export default function Home() {
   const [soundInitialized, setSoundInitialized] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeNiche, setActiveNiche] = useState("all");
+  const [pulseData, setPulseData] = useState<{ id: number; subject: string; niche: string; heat_normalized: number; recent_replies: number }[]>([]);
   const previousGhostCount = useRef<number>(0);
   
   // Refs for focusing inputs
@@ -214,6 +214,23 @@ export default function Home() {
       const stored = localStorage.getItem("0null_sound_muted");
       setMuted(stored === "true");
     } catch {}
+  }, []);
+
+  // Fetch pulse data every 60s
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/pulse');
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          if (data.success && data.pulse) setPulseData(data.pulse);
+        }
+      } catch {}
+    };
+    load();
+    const id = setInterval(load, 60000);
+    return () => { cancelled = true; clearInterval(id); };
   }, []);
 
   // Keyboard shortcuts
@@ -521,40 +538,33 @@ export default function Home() {
     return roots;
   }, [replies]);
 
-  const handlePulseSelect = (threadId: number) => {
-    const thread = threads.find(t => t.id === threadId);
-    if (thread) {
-      setSelectedThread(thread);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
   const renderReplyTree = (nodes: (Reply & { children: Reply[] })[], depth = 0) => {
-    return nodes.map((reply, index) => {
+    return nodes.map((reply) => {
       const isCollapsed = collapsedReplies[reply.id];
       const childCount = reply.children?.length || 0;
       const showCollapse = depth === 0 && childCount >= 5;
       const myPost = isMyPost(reply.id);
       const hasChildren = reply.children && reply.children.length > 0;
       const depthClass = depth > 0 ? `depth-${Math.min(depth, 3)}` : '';
-      
+
       return (
         <div key={reply.id} className={`reply ${depthClass} ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`}>
+          {depth > 0 && <div className="thread-line" />}
           <div className="reply-header">
             {reply.reply_to_id && <span className="quote-box">&gt;&gt;#{reply.reply_to_id}</span>}
-            {myPost && <span className="you-badge">You</span>}
             {reply.username && reply.username !== 'Anonymous' && <span className="username-display">{reply.username}</span>}
-            <span dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
-            <span>{redactTime(reply.created_at)}</span>
+            {myPost && <span className="meta-pill meta-pill--you">You</span>}
+            <span className="meta-pill" dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
+            <span className="meta-pill">{redactTime(reply.created_at)}</span>
           </div>
-          <div className={`reply-content ${reply.comment.length > 200 ? 'has-stamp' : ''}`} dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
+          <div className="reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
           {reply.image_filename && <img src={reply.image_filename} alt="" className={`reply-image ${expandedImage === reply.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)} />}
           <div className="reply-footer">
             <div className="reactions">
               {EMOJI_LIST.map(emoji => (
-                <button 
-                  key={emoji} 
-                  className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`} 
+                <button
+                  key={emoji}
+                  className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`}
                   onClick={() => addReaction("reply", reply.id, emoji)}
                 >
                   <span className="reaction-emoji">{emoji}</span>
@@ -562,11 +572,11 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <button className="reply-action-btn" onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>[ reply ]</button>
+            <button className="reply-action-btn" onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>reply</button>
           </div>
           {showCollapse && !isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Hide {childCount - 3} more replies</button>}
           {showCollapse && isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Show {childCount} replies</button>}
-          
+
           {/* Render nested children */}
           {!showCollapse && hasChildren && !isCollapsed && (
             <div className="nested-replies">
@@ -849,6 +859,34 @@ export default function Home() {
         )}
       </div>
 
+      {/* Active Pulse Section */}
+      {!loading && pulseData.length > 0 && (
+        <div className="active-pulse">
+          <div className="active-pulse-header">[ SYSTEM_PULSE: ACTIVE_SIGNALS ]</div>
+          <div className="active-pulse-row">
+            {pulseData.map(thread => (
+              <div
+                key={thread.id}
+                className="active-pulse-card"
+                onClick={() => {
+                  const t = threads.find(t => t.id === thread.id);
+                  if (t) setSelectedThread(t);
+                }}
+              >
+                <div className="active-pulse-card-inner">
+                  <img src="/images/:0null-logo.jpg.jpeg" alt="" className="active-pulse-logo" />
+                  <span className="active-pulse-subject">{thread.subject}</span>
+                </div>
+                <div className="active-pulse-meta">
+                  <span>{thread.niche}</span>
+                  <span>{thread.recent_replies} replies</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Thread Catalog */}
       {loading ? (
         <div className="loading">Loading</div>
@@ -890,7 +928,6 @@ export default function Home() {
         </>
       )}
       <button className="fab" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><PlusIcon /></button>
-      <PulseSidebar onSelectThread={handlePulseSelect} />
     </div>
   );
 }
