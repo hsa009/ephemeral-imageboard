@@ -94,16 +94,28 @@ export default function CinemaPage() {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [muted, setMuted] = useState(true);
+  const [showOverlay, setShowOverlay] = useState(true);
+  const [showConsole, setShowConsole] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const currentThread = threads[currentIndex];
 
+  const enableAudio = () => {
+    setMuted(false);
+    setShowOverlay(false);
+    try {
+      localStorage.setItem('0null_sound_muted', 'false');
+    } catch {}
+  };
+
   useEffect(() => {
     fetchThreads();
     try {
       const stored = localStorage.getItem('0null_sound_muted');
-      setMuted(stored !== 'false');
+      const isMuted = stored !== 'false';
+      setMuted(isMuted);
+      setShowOverlay(isMuted);
     } catch {}
   }, [activeNiche]);
 
@@ -353,7 +365,16 @@ export default function CinemaPage() {
               playsInline
               className="cinema-video-player"
             />
-            {!thread.image_filename && (
+            {showOverlay && index === currentIndex && (
+              <div className="cinema-signal-overlay" onClick={enableAudio}>
+                <div className="cinema-signal-content">
+                  <span className="cinema-signal-icon">📡</span>
+                  <span className="cinema-signal-text">SIGNAL INTERCEPTION</span>
+                  <span className="cinema-signal-subtext">CLICK TO JOIN</span>
+                </div>
+              </div>
+            )}
+            {!thread.image_filename && !showOverlay && (
               <div className="cinema-video-placeholder">
                 <span>{thread.subject}</span>
               </div>
@@ -362,8 +383,16 @@ export default function CinemaPage() {
         ))}
       </div>
 
+      {/* Mobile Console Toggle */}
+      <button 
+        className="cinema-console-toggle"
+        onClick={() => setShowConsole(!showConsole)}
+      >
+        {showConsole ? '✕ Close' : '💬 Console'}
+      </button>
+
       {/* Side Console - Right Pane */}
-      <div className="cinema-console">
+      <div className={`cinema-console ${showConsole ? 'visible' : ''}`}>
         {currentThread ? (
           <>
             <div className="cinema-console-header">
