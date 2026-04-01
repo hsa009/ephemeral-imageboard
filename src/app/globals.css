@@ -79,12 +79,11 @@ header h1 span {
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 0.9rem;
-  transition: color 0.2s, text-shadow 0.2s;
+  transition: color 0.2s;
 }
 
 .nav-links a:hover {
-  color: #00D1FF;
-  text-shadow: 0 0 8px rgba(0, 209, 255, 0.5);
+  color: var(--text-primary);
 }
 
 .create-form {
@@ -1688,10 +1687,24 @@ header h1 span {
 
   .pulse-drawer {
     display: block;
-  }
-}
 
-/* CINEMA PAGE STYLES - UNIFIED VOID STANDARD */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* CINEMA PAGE STYLES */
 .cinema-layout {
   display: flex;
   height: 100vh;
@@ -1749,7 +1762,7 @@ header h1 span {
 }
 
 .cinema-video-feed {
-  flex: 0 0 75%;
+  flex: 0 0 70%;
   height: 100%;
   border: 1px solid #27272a;
   border-radius: 12px;
@@ -1757,19 +1770,17 @@ header h1 span {
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   scrollbar-width: none;
-  box-shadow: 0 0 30px rgba(0, 209, 255, 0.1);
 }
 
 .cinema-video-feed::-webkit-scrollbar {
   display: none;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .cinema-video-feed {
     flex: none;
-    height: 100%;
+    height: 50vh;
     width: 100%;
-    border-radius: 0;
   }
 }
 
@@ -1805,31 +1816,21 @@ header h1 span {
 }
 
 .cinema-console {
-  flex: 0 0 25%;
+  flex: 0 0 30%;
   background: #0A0A0B;
   border: 1px solid #27272a;
   border-radius: 12px;
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-@media (max-width: 1024px) {
-  .cinema-layout {
-    flex-direction: column;
-  }
-  
+@media (max-width: 768px) {
   .cinema-console {
-    display: none;
     flex: none;
     width: 100%;
-    height: 50%;
-    border-radius: 0;
-  }
-  
-  .cinema-console.visible {
-    display: flex;
+    min-height: 50vh;
   }
 }
 
@@ -1866,27 +1867,6 @@ header h1 span {
 
 .cinema-meta-timer {
   color: #00D1FF;
-}
-
-.cinema-signal-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.6rem;
-  margin-bottom: 12px;
-}
-
-.cinema-stat {
-  color: #00D1FF;
-}
-
-.cinema-stat.orange {
-  color: #D97706;
-}
-
-.cinema-stat.zinc {
-  color: #71717a;
 }
 
 .cinema-console-actions {
@@ -2149,185 +2129,5 @@ header h1 span {
   background: rgba(0, 209, 255, 0.2);
   border-color: #00D1FF;
 }
-
-/* Signal Interception Overlay */
-.cinema-signal-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 50;
-  backdrop-filter: blur(4px);
-}
-
-.cinema-signal-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  animation: signal-pulse 2s ease-in-out infinite;
-}
-
-@keyframes signal-pulse {
-  0%, 100% { opacity: 0.8; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.02); }
-}
-
-.cinema-signal-icon {
-  font-size: 3rem;
-  animation: signal-blink 1s ease-in-out infinite;
-}
-
-@keyframes signal-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.cinema-signal-text {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #00D1FF;
-  text-shadow: 0 0 20px rgba(0, 209, 255, 0.8);
-  letter-spacing: 2px;
-}
-
-.cinema-signal-subtext {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.8rem;
-  color: #71717a;
-  letter-spacing: 1px;
-}
-
-/* Mobile Console Toggle */
-.cinema-console-toggle {
-  display: none;
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: rgba(10, 10, 11, 0.9);
-  border: 1px solid #00D1FF;
-  color: #00D1FF;
-  padding: 14px 24px;
-  border-radius: 8px;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.7rem;
-  cursor: pointer;
-  z-index: 200;
-  box-shadow: 0 0 20px rgba(0, 209, 255, 0.3);
-  animation: console-pulse 2s ease-in-out infinite;
-}
-
-@keyframes console-pulse {
-  0%, 100% { box-shadow: 0 0 15px rgba(0, 209, 255, 0.3); }
-  50% { box-shadow: 0 0 25px rgba(0, 209, 255, 0.5); }
-}
-
-@media (max-width: 1024px) {
-  .cinema-console-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
-  
-  .cinema-console {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    width: 100%;
-    max-width: 400px;
-    height: 100vh;
-    z-index: 150;
-    transition: right 0.3s ease;
-    border-radius: 0;
-  }
-  
-  .cinema-console.visible {
-    right: 0;
-  }
-}
-
-/* Cinema Video Status Overlay */
-.cinema-video-status {
-  display: flex;
-  gap: 12px;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.55rem;
-  color: #00D1FF;
-  margin-top: 8px;
-  padding: 6px 8px;
-  background: rgba(0, 209, 255, 0.05);
-  border: 1px solid rgba(0, 209, 255, 0.2);
-  border-radius: 4px;
-}
-
-.cinema-video-status span {
-  opacity: 0.8;
-}
-
-/* Cinema Section Label */
-.cinema-section-label {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.7rem;
-  color: #00D1FF;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-  opacity: 0.9;
-}
-
-.cinema-stat.cyan {
-  color: #00D1FF;
-}
-
-/* Cinema Metadata Colors */
-.cinema-meta-user {
-  color: #00D1FF;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.65rem;
-}
-
-.cinema-meta-void {
-  color: #71717a;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.65rem;
-}
-
-.cinema-video-info {
-  position: absolute;
-  bottom: 12px;
-  left: 12px;
-  display: flex;
-  gap: 8px;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.6rem;
-  z-index: 10;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.cinema-video-meta {
-  display: flex;
-  gap: 8px;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.65rem;
-  margin-bottom: 8px;
-}
-
-/* Cinema Video Bottom Bar */
-.cinema-video-bottom-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.55rem;
-  color: #00D1FF;
 }

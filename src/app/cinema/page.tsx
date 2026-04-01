@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import VoidTimer from '@/components/VoidTimer';
-import Link from 'next/link';
+import { isThreadExpired } from '@/components/VoidTimer';
 
 interface Thread {
   id: number;
@@ -85,7 +85,7 @@ export default function CinemaPage() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeNiche, setActiveNiche] = useState('all');
-  const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [replies, setReplies] = useState<Reply[]>([]);
   const [repliesLoading, setRepliesLoading] = useState(false);
   const [replyComment, setReplyComment] = useState('');
@@ -93,25 +93,53 @@ export default function CinemaPage() {
   const [replyingTo, setReplyingTo] = useState<{ id: number; comment: string } | null>(null);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [muted, setMuted] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const currentThread = threads[currentIndex];
 
   useEffect(() => {
     fetchThreads();
+    try {
+      const stored = localStorage.getItem('0null_sound_muted');
+      setMuted(stored !== 'false');
+    } catch {}
   }, [activeNiche]);
 
   useEffect(() => {
-    if (selectedThread) {
-      fetchReplies(selectedThread.id);
+    if (currentThread) {
+      fetchReplies(currentThread.id);
     }
-  }, [selectedThread?.id]);
+  }, [currentIndex, currentThread?.id]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop;
+      const itemHeight = container.clientHeight;
+      const newIndex = Math.round(scrollTop / itemHeight);
+      if (newIndex !== currentIndex && newIndex >= 0 && newIndex < threads.length) {
+        setCurrentIndex(newIndex);
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [currentIndex, threads.length]);
 
   const fetchThreads = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (activeNiche && activeNiche !== 'all') params.set('niche', activeNiche);
-      const res = await fetch(`/api/thread/list${params.toString() ? '?' + params.toString() : ''}`);
+      
+      const url = `/api/thread/list${params.toString() ? '?' + params.toString() : ''}`;
+      const res = await fetch(url);
       const data = await res.json();
+      
       if (data.threads) {
         const sorted = [...data.threads].sort((a, b) => 
           new Date(b.last_bumped_at).getTime() - new Date(a.last_bumped_at).getTime()
@@ -154,10 +182,6 @@ export default function CinemaPage() {
       });
     };
 
-    setThreads(prev => updateReactions(prev, id) as Thread[]);
-    if (selectedThread?.id === id) {
-      setSelectedThread(prev => prev ? updateReactions([prev], id)[0] as Thread : null);
-    }
     setReplies(prev => updateReactions(prev, id) as Reply[]);
 
     if (isAlreadyReacted) {
@@ -174,6 +198,32 @@ export default function CinemaPage() {
       });
     } catch (e) { 
       console.error('Failed to toggle reaction:', e);
+    }
+  };
+
+  const handleReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyComment.trim() || !currentThread) return;
+
+    try {
+      const res = await fetch(`/api/thread/${currentThread.id}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          comment: replyComment,
+          username: username || 'Anonymous',
+          reply_to_id: replyingTo?.id || null,
+        }),
+      });
+
+      if (res.ok) {
+        setReplyComment('');
+        setReplyingTo(null);
+        setShowReplyForm(false);
+        fetchReplies(currentThread.id);
+      }
+    } catch (e) {
+      console.error('Failed to post reply:', e);
     }
   };
 
@@ -201,33 +251,37 @@ export default function CinemaPage() {
       const depthClass = depth > 0 ? `depth-${Math.min(depth, 3)}` : '';
 
       return (
-        <div key={reply.id} className={`reply ${depthClass} ${myPost ? 'highlighted' : ''}`}>
-          <div className="reply-header">
-            {reply.reply_to_id && <span className="quote-box">&gt;&gt;#{reply.reply_to_id}</span>}
+        <div key={reply.id} className={`cinema-reply ${depthClass}`}>
+          <div className="cinema-reply-header">
+            {reply.reply_to_id && <span className="quote-ref">&gt;&gt;#{reply.reply_to_id}</span>}
             {reply.username && reply.username !== 'Anonymous' && (
-              <span className="username-display">{reply.username}</span>
+              <span className="cinema-username">{reply.username}</span>
             )}
-            <span className="meta-pill post-id" dangerouslySetInnerHTML={{ __html: '#' + reply.id }} />
-            <span className="meta-pill">{redactTime(reply.created_at)}</span>
+            <span className="cinema-post-id">#{reply.id}</span>
+            <span className="cinema-timestamp">{redactTime(reply.created_at)}</span>
           </div>
-          <div className="reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
-          {reply.image_filename && <img src={reply.image_filename} alt="" className={`reply-image ${expandedImage === reply.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)} />}
-          <div className="reply-footer">
-            <div className="reactions">
-              {EMOJI_LIST.map(emoji => (
+          <div className="cinema-reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
+          <div className="cinema-reply-footer">
+            <button 
+              className="cinema-reply-btn"
+              onClick={() => { setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) }); setShowReplyForm(true); }}
+            >
+              Reply
+            </button>
+            <div className="cinema-reactions-mini">
+              {EMOJI_LIST.slice(0, 4).map(emoji => (
                 <button
                   key={emoji}
-                  className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`}
+                  className={`cinema-reaction-mini ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`}
                   onClick={() => addReaction('reply', reply.id, emoji)}
                 >
-                  <span className="reaction-emoji">{emoji}</span>
-                  {reply.reactions?.[emoji] && <span className="reaction-count">{reply.reactions[emoji]}</span>}
+                  {emoji}
                 </button>
               ))}
             </div>
           </div>
           {hasChildren && (
-            <div className="nested-replies">
+            <div className="cinema-nested-replies">
               {renderReplyTree(reply.children!, depth + 1)}
             </div>
           )}
@@ -255,157 +309,131 @@ export default function CinemaPage() {
     return roots;
   };
 
-  const handleReply = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!replyComment.trim() || !selectedThread) return;
-
-    try {
-      const res = await fetch(`/api/thread/${selectedThread.id}/reply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          comment: replyComment,
-          username: username || 'Anonymous',
-          reply_to_id: replyingTo?.id || null,
-        }),
-      });
-
-      if (res.ok) {
-        setReplyComment('');
-        setReplyingTo(null);
-        setShowReplyForm(false);
-        fetchReplies(selectedThread.id);
-      }
-    } catch (e) {
-      console.error('Failed to post reply:', e);
-    }
+  const getTimeUntilExpiry = (lastBumpAt: string) => {
+    const expiryTime = new Date(lastBumpAt).getTime() + (6 * 60 * 60 * 1000);
+    const now = Date.now();
+    const diff = expiryTime - now;
+    if (diff <= 0) return '0h';
+    const hours = Math.floor(diff / 3600000);
+    return `${hours}h`;
   };
 
   if (loading) {
     return (
-      <div className="container">
-        <div className="loading">Loading...</div>
+      <div className="cinema-container">
+        <div className="cinema-loading">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      {/* Header */}
-      <header>
-        <div className="header-left">
-          <Link href="/" className="logo">0null</Link>
-        </div>
-      </header>
-      <div className="header-divider" />
-
-      {/* Niche Navigation */}
-      <div className="niche-nav">
+    <div className="cinema-layout">
+      {/* Niche Bar */}
+      <div className="cinema-niche-bar">
         {NICHE_OPTIONS.map(niche => (
           <button
             key={niche}
-            className={`niche-link ${activeNiche === niche ? 'active' : ''}`}
-            onClick={() => { setActiveNiche(niche); setSelectedThread(null); }}
+            className={`cinema-niche-btn ${activeNiche === niche ? 'active' : ''}`}
+            onClick={() => setActiveNiche(niche)}
           >
             {niche === 'all' ? '[ all ]' : `[ ${niche} ]`}
           </button>
         ))}
       </div>
 
-      {/* Thread View */}
-      {selectedThread ? (
-        <div className="thread-view">
-          <button className="back-btn" onClick={() => setSelectedThread(null)}>
-            &lt; Back to catalog
-          </button>
-          
-          <div className="thread-op">
-            {selectedThread.image_filename ? (
-              <img src={selectedThread.image_filename} alt="" className={`thread-op-image ${expandedImage === selectedThread.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === selectedThread.image_filename ? null : selectedThread.image_filename)} />
-            ) : (
-              <div className="fallback-container fallback-container--op">
-                <img
-                  src="/images/:0null-logo.jpg.jpeg"
-                  alt=""
-                  className="fallback-logo"
-                  onError={(e) => { (e.target as HTMLImageElement).src = '/images/:0null-logo.jpg.jpeg'; }}
-                />
-                <span className="fallback-text">{selectedThread.subject}</span>
+      {/* Video Feed - Left Pane */}
+      <div className="cinema-video-feed" ref={scrollContainerRef}>
+        {threads.map((thread, index) => (
+          <div key={thread.id} className="cinema-video-item snap-start">
+            <video
+              src={thread.image_filename || undefined}
+              autoPlay
+              loop
+              muted={muted}
+              playsInline
+              className="cinema-video-player"
+            />
+            {!thread.image_filename && (
+              <div className="cinema-video-placeholder">
+                <span>{thread.subject}</span>
               </div>
             )}
-            <div className="thread-op-content">
-              <div className="thread-op-subject">{selectedThread.subject}</div>
-              <div className="thread-op-comment" dangerouslySetInnerHTML={{ __html: formatQuote(selectedThread.comment) }} />
-            </div>
           </div>
-          <div className="thread-op-footer">
-            <div className="thread-meta">
-              {selectedThread.username && selectedThread.username !== 'Anonymous' && <span className="username-display">{selectedThread.username} • </span>}
-              Posted {new Date(selectedThread.created_at).toLocaleString()}
-            </div>
-            <button className="reply-btn" onClick={() => setShowReplyForm(!showReplyForm)}>
-              [ REPLY ]
-            </button>
-          </div>
+        ))}
+      </div>
 
-          {/* Reply Form */}
-          {showReplyForm && (
-            <div className="reply-form">
-              {replyingTo && <div className="reply-indicator">Replying to #{replyingTo.id} <button onClick={() => setReplyingTo(null)} className="cancel-reply">X</button></div>}
-              <form onSubmit={handleReply}>
-                <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} className="username-input" />
-                <textarea ref={replyTextareaRef} placeholder="Write your reply..." value={replyComment} onChange={(e) => setReplyComment(e.target.value)} required />
-                <div className="form-actions">
-                  <button type="submit" className="btn btn-primary">Reply</button>
-                </div>
-              </form>
+      {/* Side Console - Right Pane */}
+      <div className="cinema-console">
+        {currentThread ? (
+          <>
+            <div className="cinema-console-header">
+              <div className="cinema-subject">{currentThread.subject.toUpperCase()}</div>
+              <div className="cinema-meta-row">
+                <span className="cinema-meta-id">#{currentThread.id}</span>
+                {currentThread.niche && (
+                  <span className="cinema-meta-niche">[ n: {currentThread.niche} ]</span>
+                )}
+                <span className="cinema-meta-timer">[ VOID_IN: {getTimeUntilExpiry(currentThread.last_bumped_at)} ]</span>
+              </div>
+              <div className="cinema-console-actions">
+                <button 
+                  className="cinema-action-btn"
+                  onClick={() => setMuted(!muted)}
+                >
+                  {muted ? '🔇 Unmute' : '🔊 Mute'}
+                </button>
+                <button 
+                  className="cinema-action-btn primary"
+                  onClick={() => setShowReplyForm(!showReplyForm)}
+                >
+                  [ REPLY ]
+                </button>
+              </div>
             </div>
-          )}
 
-          {/* Replies */}
-          <div className="replies">
-            {repliesLoading ? (
-              <div className="loading">Loading</div>
-            ) : (
-              renderReplyTree(buildReplyTree(replies))
-            )}
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* Catalog Grid */}
-          <div className="catalog">
-            {threads.map(thread => (
-              <div key={thread.id} className="thread-card" onClick={() => setSelectedThread(thread)}>
-                <VoidTimer lastBumpAt={thread.last_bumped_at} />
-                {thread.image_filename ? (
-                  <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />
-                ) : (
-                  <div className="fallback-container">
-                    <img
-                      src="/images/:0null-logo.jpg.jpeg"
-                      alt=""
-                      className="fallback-logo"
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/:0null-logo.jpg.jpeg'; }}
-                    />
-                    <span className="fallback-text">{thread.subject}</span>
+            {/* Reply Stream */}
+            <div className="cinema-reply-stream">
+              {repliesLoading ? (
+                <div className="cinema-loading-small">Loading replies...</div>
+              ) : (
+                renderReplyTree(buildReplyTree(replies))
+              )}
+            </div>
+
+            {/* Reply Form */}
+            {showReplyForm && (
+              <div className="cinema-reply-form">
+                {replyingTo && (
+                  <div className="cinema-reply-indicator">
+                    Replying to #{replyingTo.id}
+                    <button onClick={() => setReplyingTo(null)} className="cinema-cancel-reply">X</button>
                   </div>
                 )}
-                <div className="thread-info">
-                  {thread.niche && (
-                    <div className="thread-niche">[ n: {thread.niche} ]</div>
-                  )}
-                  <div className="thread-subject">{thread.subject}</div>
-                  <div className="thread-meta">{thread.bump_count} replies • {new Date(thread.last_bumped_at).toLocaleTimeString()}</div>
-                </div>
+                <form onSubmit={handleReply}>
+                  <input 
+                    type="text" 
+                    placeholder="Name (optional)" 
+                    value={username} 
+                    onChange={(e) => setUsername(e.target.value)} 
+                    className="cinema-username-input"
+                  />
+                  <textarea 
+                    ref={replyTextareaRef}
+                    placeholder="Write your reply..." 
+                    value={replyComment} 
+                    onChange={(e) => setReplyComment(e.target.value)} 
+                    required 
+                    className="cinema-textarea"
+                  />
+                  <button type="submit" className="cinema-submit-btn">Post</button>
+                </form>
               </div>
-            ))}
-          </div>
-          {threads.length === 0 && (
-            <div className="loading">No threads yet. Be the first to post!</div>
-          )}
-        </>
-      )}
+            )}
+          </>
+        ) : (
+          <div className="cinema-empty">No videos to display</div>
+        )}
+      </div>
     </div>
   );
 }
