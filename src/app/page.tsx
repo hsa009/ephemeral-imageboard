@@ -477,6 +477,19 @@ export default function Home() {
   const formatQuote = (text: string) => text.replace(/>(\d+)/g, '<span class="quote-ref">>>$1</span>');
   const toggleCollapse = (replyId: number) => setCollapsedReplies(prev => ({ ...prev, [replyId]: !prev[replyId] }));
 
+  const redactId = (id: number) => {
+    const s = String(id);
+    if (s.length <= 2) return s;
+    return s.slice(0, -2) + '<span class="redacted">' + s.slice(-2) + '</span>';
+  };
+
+  const redactTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const h = d.getHours().toString().padStart(2, '0');
+    const m = d.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
   // Build nested reply tree from flat array
   const replyTree = useMemo(() => {
     if (!replies || replies.length === 0) return [];
@@ -526,18 +539,15 @@ export default function Home() {
       const depthClass = depth > 0 ? `depth-${Math.min(depth, 3)}` : '';
       
       return (
-        <div key={reply.id} className={`reply ${depthClass} ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`} style={{ 
-          marginLeft: depth > 0 ? '16px' : 0,
-          position: 'relative'
-        }}>
+        <div key={reply.id} className={`reply ${depthClass} ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`}>
           <div className="reply-header">
             {reply.reply_to_id && <span className="quote-box">&gt;&gt;#{reply.reply_to_id}</span>}
             {myPost && <span className="you-badge">You</span>}
             {reply.username && reply.username !== 'Anonymous' && <span className="username-display">{reply.username}</span>}
-            <span>#{reply.id}</span>
-            <span>{timeAgo(reply.created_at)}</span>
+            <span dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
+            <span>{redactTime(reply.created_at)}</span>
           </div>
-          <div className="reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
+          <div className={`reply-content ${reply.comment.length > 200 ? 'has-stamp' : ''}`} dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
           {reply.image_filename && <img src={reply.image_filename} alt="" className={`reply-image ${expandedImage === reply.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)} />}
           <div className="reply-footer">
             <div className="reactions">

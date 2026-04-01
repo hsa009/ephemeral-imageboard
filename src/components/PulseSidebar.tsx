@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 interface PulseThread {
   id: number;
@@ -50,11 +50,8 @@ export default function PulseSidebar({ onSelectThread }: PulseSidebarProps) {
     setDrawerOpen(false);
   };
 
-  const content = (
+  const itemsContent = (
     <>
-      <div className="pulse-header">
-        [ SYSTEM_PULSE: MONITORING ]
-      </div>
       {pulse.length === 0 ? (
         <div className="pulse-empty">waiting for signal...</div>
       ) : (
@@ -65,7 +62,7 @@ export default function PulseSidebar({ onSelectThread }: PulseSidebarProps) {
             onClick={() => handleClick(thread.id)}
           >
             <div className="pulse-item-header">
-              <span className="pulse-dot" />
+              <span className="pulse-dot">SECRET</span>
               <span className="pulse-subject">{thread.subject}</span>
             </div>
             <div className="pulse-heat-bar">
@@ -87,19 +84,25 @@ export default function PulseSidebar({ onSelectThread }: PulseSidebarProps) {
 
   return (
     <>
-      {/* Desktop sidebar */}
+      {/* Desktop: Manila folder tab */}
       <div className={`pulse-sidebar ${glitch ? 'pulse-glitch' : ''}`}>
-        {content}
+        <div className="pulse-header">[ ACCESS_LOGS ]</div>
+        <div className="pulse-items-container">
+          {itemsContent}
+        </div>
       </div>
 
-      {/* Mobile trigger + drawer */}
+      {/* Mobile trigger */}
       <button
         className="pulse-mobile-trigger"
         onClick={() => setDrawerOpen(!drawerOpen)}
-        title="System Pulse"
+        title="Access Logs"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 4h16v16H4z"/>
+          <path d="M4 4l4-2h8l4 2"/>
+          <line x1="8" y1="10" x2="16" y2="10"/>
+          <line x1="8" y1="14" x2="14" y2="14"/>
         </svg>
       </button>
 
@@ -108,10 +111,10 @@ export default function PulseSidebar({ onSelectThread }: PulseSidebarProps) {
           <div className="pulse-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
           <div className={`pulse-drawer ${glitch ? 'pulse-glitch' : ''}`}>
             <div className="pulse-drawer-header">
-              <span>[ SYSTEM_PULSE ]</span>
+              <span>[ ACCESS_LOGS ]</span>
               <button onClick={() => setDrawerOpen(false)} className="pulse-drawer-close">✕</button>
             </div>
-            {content}
+            {itemsContent}
           </div>
         </>
       )}
