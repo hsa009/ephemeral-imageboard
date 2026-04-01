@@ -1688,8 +1688,10 @@ header h1 span {
 
   .pulse-drawer {
     display: block;
+  }
+}
 
-
+/* CINEMA PAGE STYLES */
 
 
 
@@ -2263,5 +2265,50 @@ header h1 span {
     right: 0;
   }
 }
-  }
+
+/* Cinema Video Status Overlay */
+.cinema-video-status {
+  display: flex;
+  gap: 12px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.55rem;
+  color: #00D1FF;
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: rgba(0, 209, 255, 0.05);
+  border: 1px solid rgba(0, 209, 255, 0.2);
+  border-radius: 4px;
+}
+
+.cinema-video-status span {
+  opacity: 0.8;
+}
+
+/* Cinema Section Label */
+.cinema-section-label {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.7rem;
+  color: #00D1FF;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+
+.cinema-stat.cyan {
+  color: #00D1FF;
+}
+
+/* Cinema Video Bottom Bar */
+.cinema-video-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.55rem;
+  color: #00D1FF;
 }

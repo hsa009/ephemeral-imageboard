@@ -369,11 +369,15 @@ export default function CinemaPage() {
               <div className="cinema-signal-overlay" onClick={enableAudio}>
                 <div className="cinema-signal-content">
                   <span className="cinema-signal-icon">🔓</span>
-                  <span className="cinema-signal-text">ENCRYPTED SIGNAL DETECTED</span>
-                  <span className="cinema-signal-subtext">CLICK TO DECODE</span>
+                  <span className="cinema-signal-text">ENCRYPTED_SIGNAL_DETECTED</span>
+                  <span className="cinema-signal-subtext">CLICK_TO_DECODE</span>
                 </div>
               </div>
             )}
+            <div className="cinema-video-bottom-bar">
+              <span>[ STATUS: STREAMING ]</span>
+              <span>[ BITRATE: {(Math.random() * 10 + 5).toFixed(1)} Mbps ]</span>
+            </div>
             {!thread.image_filename && !showOverlay && (
               <div className="cinema-video-placeholder">
                 <span>{thread.subject}</span>
@@ -396,11 +400,16 @@ export default function CinemaPage() {
         {currentThread ? (
           <>
             <div className="cinema-console-header">
-              <div className="cinema-subject">{currentThread.subject.toUpperCase()}</div>
+              <div className="cinema-section-label">[ SIGNAL_METADATA ]</div>
+              <div className="cinema-subject">{currentThread.subject}</div>
               <div className="cinema-signal-stats">
-                <span className="cinema-stat">[ SIGNAL_STRENGTH: {Math.floor(Math.random() * 20 + 80)}% ]</span>
-                <span className="cinema-stat orange">[ BURNING_IN: {getTimeUntilExpiry(currentThread.last_bumped_at)} ]</span>
-                <span className="cinema-stat zinc">[ LOC: #{currentThread.id} ]</span>
+                <span className="cinema-stat cyan">[ user_id: {currentThread.username || 'Anonymous'} ]</span>
+                <span className="cinema-stat orange">[ #{currentThread.id} ]</span>
+                <span className="cinema-stat zinc">[ {redactTime(currentThread.created_at)} ]</span>
+              </div>
+              <div className="cinema-video-status">
+                <span>[ STATUS: STREAMING ]</span>
+                <span>[ BITRATE: {(Math.random() * 10 + 5).toFixed(1)} Mbps ]</span>
               </div>
               <div className="cinema-console-actions">
                 <button 
