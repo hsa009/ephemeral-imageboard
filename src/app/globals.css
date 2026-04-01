@@ -708,16 +708,24 @@ header h1 span {
 .reaction-picker-trigger {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--text-primary);
-  padding: 4px 10px;
-  font-size: 0.75rem;
+  padding: 4px 8px;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.15s ease;
-  font-family: "Courier New", Courier, monospace;
   border-radius: 6px;
+  min-width: 36px;
+  height: 32px;
+}
+
+.reply .reaction-picker-trigger {
+  font-size: 0.9rem;
+  padding: 2px 6px;
+  min-width: 28px;
+  height: 26px;
 }
 
 .reaction-picker-trigger:hover {

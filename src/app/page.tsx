@@ -610,7 +610,7 @@ export default function Home() {
                 className="reaction-picker-trigger"
                 onClick={() => toggleReactionPicker('reply', reply.id)}
               >
-                {Object.values(reply.reactions || {}).reduce((a: number, b) => a + (Number(b) || 0), 0) || '😀'}
+                😀
               </button>
               {openReactions?.type === 'reply' && openReactions?.id === reply.id && (
                 <div className="reaction-picker">
@@ -727,7 +727,7 @@ export default function Home() {
                     className="reaction-picker-trigger"
                     onClick={() => toggleReactionPicker('thread', selectedThread.id)}
                   >
-                    {Object.values(selectedThread.reactions || {}).reduce((a: number, b) => a + (Number(b) || 0), 0) || '😀'} React
+                    😀 React
                   </button>
                   {openReactions?.type === 'thread' && openReactions?.id === selectedThread.id && (
                     <div className="reaction-picker">
