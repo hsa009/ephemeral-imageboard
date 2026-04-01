@@ -549,10 +549,16 @@ export default function Home() {
 
       return (
         <div key={reply.id} className={`reply ${depthClass} ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`}>
-          {depth > 0 && <div className="thread-line" />}
+          <div className="quick-actions">
+            <button className="quick-action-btn" onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>Reply</button>
+            <button className="quick-action-btn" onClick={() => navigator.clipboard.writeText(`>>#${reply.id}`)}>Link</button>
+            <button className="quick-action-btn">Report</button>
+          </div>
           <div className="reply-header">
             {reply.reply_to_id && <span className="quote-box">&gt;&gt;#{reply.reply_to_id}</span>}
-            {reply.username && reply.username !== 'Anonymous' && <span className="username-display">{reply.username}</span>}
+            {reply.username && reply.username !== 'Anonymous' && (
+              <span className="username-display" style={{ color: `hsl(${(reply.id * 137) % 360}, 70%, 65%)` }}>{reply.username}</span>
+            )}
             {myPost && <span className="meta-pill meta-pill--you">You</span>}
             <span className="meta-pill" dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
             <span className="meta-pill">{redactTime(reply.created_at)}</span>
@@ -572,7 +578,6 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <button className="reply-action-btn" onClick={() => setReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>reply</button>
           </div>
           {showCollapse && !isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Hide {childCount - 3} more replies</button>}
           {showCollapse && isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Show {childCount} replies</button>}
