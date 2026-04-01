@@ -193,6 +193,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeNiche, setActiveNiche] = useState("all");
   const [pulseData, setPulseData] = useState<{ id: number; subject: string; niche: string; heat_normalized: number; recent_replies: number }[]>([]);
+  const [openReactions, setOpenReactions] = useState<{ type: string; id: number } | null>(null);
   const previousGhostCount = useRef<number>(0);
   
   // Refs for focusing inputs
@@ -365,6 +366,18 @@ export default function Home() {
         delete win.__reactionInProgress[key];
       }
     }
+  };
+
+  const toggleReactionPicker = (type: string, id: number) => {
+    setOpenReactions(prev => {
+      if (prev?.type === type && prev?.id === id) return null;
+      return { type, id };
+    });
+  };
+
+  const handleReactionClick = (type: string, id: number, emoji: string) => {
+    addReaction(type, id, emoji);
+    setOpenReactions(null);
   };
 
   const timeAgo = (dateStr: string) => {
@@ -592,17 +605,27 @@ export default function Home() {
           <div className="reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
           {reply.image_filename && <img src={reply.image_filename} alt="" className={`reply-image ${expandedImage === reply.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)} />}
           <div className="reply-footer">
-            <div className="reactions">
-              {EMOJI_LIST.map(emoji => (
-                <button
-                  key={emoji}
-                  className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`}
-                  onClick={() => addReaction("reply", reply.id, emoji)}
-                >
-                  <span className="reaction-emoji">{emoji}</span>
-                  <span className="reaction-count">{reply.reactions?.[emoji] || ""}</span>
-                </button>
-              ))}
+            <div className="reactions" style={{ position: 'relative' }}>
+              <button 
+                className="reaction-picker-trigger"
+                onClick={() => toggleReactionPicker('reply', reply.id)}
+              >
+                {Object.values(reply.reactions || {}).reduce((a: number, b) => a + (Number(b) || 0), 0) || '😀'}
+              </button>
+              {openReactions?.type === 'reply' && openReactions?.id === reply.id && (
+                <div className="reaction-picker">
+                  {EMOJI_LIST.map(emoji => (
+                    <button
+                      key={emoji}
+                      className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`}
+                      onClick={() => handleReactionClick('reply', reply.id, emoji)}
+                    >
+                      <span className="reaction-emoji">{emoji}</span>
+                      {reply.reactions?.[emoji] && <span className="reaction-count">{reply.reactions[emoji]}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           {showCollapse && !isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Hide {childCount - 3} more replies</button>}
@@ -699,17 +722,27 @@ export default function Home() {
                   {selectedThread.username && selectedThread.username !== 'Anonymous' && <span className="username-display">{selectedThread.username} • </span>}
                   Posted {new Date(selectedThread.created_at).toLocaleString()}
                 </div>
-                <div className="reactions">
-                  {EMOJI_LIST.map(emoji => (
-                    <button 
-                      key={emoji} 
-                      className={`reaction-btn ${hasReacted('thread', selectedThread.id, emoji) ? 'reacted' : ''}`} 
-                      onClick={() => addReaction("thread", selectedThread.id, emoji)}
-                    >
-                      <span className="reaction-emoji">{emoji}</span>
-                      <span className="reaction-count">{selectedThread.reactions?.[emoji] || ""}</span>
-                    </button>
-                  ))}
+                <div className="reactions" style={{ position: 'relative' }}>
+                  <button 
+                    className="reaction-picker-trigger"
+                    onClick={() => toggleReactionPicker('thread', selectedThread.id)}
+                  >
+                    {Object.values(selectedThread.reactions || {}).reduce((a: number, b) => a + (Number(b) || 0), 0) || '😀'} React
+                  </button>
+                  {openReactions?.type === 'thread' && openReactions?.id === selectedThread.id && (
+                    <div className="reaction-picker">
+                      {EMOJI_LIST.map(emoji => (
+                        <button 
+                          key={emoji} 
+                          className={`reaction-btn ${hasReacted('thread', selectedThread.id, emoji) ? 'reacted' : ''}`}
+                          onClick={() => handleReactionClick('thread', selectedThread.id, emoji)}
+                        >
+                          <span className="reaction-emoji">{emoji}</span>
+                          {selectedThread.reactions?.[emoji] && <span className="reaction-count">{selectedThread.reactions[emoji]}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
