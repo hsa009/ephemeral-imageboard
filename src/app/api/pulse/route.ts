@@ -16,7 +16,7 @@ export async function GET() {
     // Get threads with their reply counts in the last hour
     const { data: threads, error: threadsError } = await supabaseAdmin
       .from('threads')
-      .select('id, subject, niche, last_bumped_at, bump_count, created_at, reactions')
+      .select('id, subject, niche, last_bumped_at, bump_count, created_at, reactions, image_filename')
       .order('last_bumped_at', { ascending: false })
       .limit(50);
 
@@ -50,6 +50,8 @@ export async function GET() {
           heat_score: heatScore,
           recent_replies: recentReplies,
           total_reactions: totalReactions,
+          last_bumped_at: t.last_bumped_at,
+          image_filename: t.image_filename,
         };
       })
       .sort((a, b) => b.heat_score - a.heat_score)

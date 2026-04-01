@@ -192,7 +192,7 @@ export default function Home() {
   const [soundInitialized, setSoundInitialized] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeNiche, setActiveNiche] = useState("all");
-  const [pulseData, setPulseData] = useState<{ id: number; subject: string; niche: string; heat_normalized: number; recent_replies: number }[]>([]);
+  const [pulseData, setPulseData] = useState<{ id: number; subject: string; niche: string; heat_normalized: number; recent_replies: number; last_bumped_at?: string; image_filename?: string }[]>([]);
   const [openReactions, setOpenReactions] = useState<{ type: string; id: number } | null>(null);
   const previousGhostCount = useRef<number>(0);
   
@@ -926,9 +926,9 @@ export default function Home() {
       {/* Active Pulse Section */}
       {!loading && pulseData.length > 0 && (
         <div className="active-pulse">
-          <div className="active-pulse-header">[ SYSTEM_PULSE: ACTIVE_SIGNALS ]</div>
+          <div className="active-pulse-header">[ peak ]</div>
           <div className="active-pulse-row">
-            {pulseData.map(thread => (
+            {pulseData.slice(0, 3).map(thread => (
               <div
                 key={thread.id}
                 className="active-pulse-card"
@@ -937,13 +937,25 @@ export default function Home() {
                   if (t) setSelectedThread(t);
                 }}
               >
-                <div className="active-pulse-card-inner">
-                  <img src="/images/:0null-logo.jpg.jpeg" alt="" className="active-pulse-logo" />
-                  <span className="active-pulse-subject">{thread.subject}</span>
-                </div>
-                <div className="active-pulse-meta">
-                  <span>{thread.niche}</span>
-                  <span>{thread.recent_replies} replies</span>
+                {thread.image_filename ? (
+                  <img src={thread.image_filename} alt="" className="thread-image" loading="lazy" />
+                ) : (
+                  <div className="fallback-container">
+                    <img
+                      src="/images/:0null-logo.jpg.jpeg"
+                      alt=""
+                      className="fallback-logo"
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/images/:0null-logo.jpg.jpeg'; }}
+                    />
+                    <span className="fallback-text">{thread.subject}</span>
+                  </div>
+                )}
+                <div className="thread-info">
+                  {thread.niche && (
+                    <div className="thread-niche">[ n: {thread.niche} ]</div>
+                  )}
+                  <div className="thread-subject">{thread.subject}</div>
+                  <div className="thread-meta">{thread.recent_replies} replies • {thread.heat_normalized}% heat</div>
                 </div>
               </div>
             ))}
