@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface PulseThread {
   id: number;
@@ -20,31 +20,30 @@ export default function PulseSidebar({ onSelectThread }: PulseSidebarProps) {
   const [pulse, setPulse] = useState<PulseThread[]>([]);
   const [glitch, setGlitch] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const fetchPulse = useCallback(async () => {
-    try {
-      const res = await fetch('/api/pulse');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.pulse) {
-          setPulse(data.pulse);
-          setGlitch(true);
-          setTimeout(() => setGlitch(false), 300);
-        }
-      }
-    } catch (e) {
-      console.error("[PULSE] Fetch error:", e);
-    }
-  }, []);
 
   useEffect(() => {
-    fetchPulse();
-    intervalRef.current = setInterval(fetchPulse, 30000);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const res = await fetch('/api/pulse');
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          if (data.success && data.pulse) {
+            setPulse(data.pulse);
+            setGlitch(true);
+            setTimeout(() => { if (!cancelled) setGlitch(false); }, 300);
+          }
+        }
+      } catch (e) {
+        console.error("[PULSE] Fetch error:", e);
+      }
     };
-  }, [fetchPulse]);
+
+    load();
+    const id = setInterval(load, 30000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
 
   const handleClick = (threadId: number) => {
     onSelectThread(threadId);
