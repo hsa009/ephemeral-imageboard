@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import VoidTimer from '@/components/VoidTimer';
+import Link from 'next/link';
 
 interface Thread {
   id: number;
@@ -92,12 +93,7 @@ export default function CinemaPage() {
   const [replyingTo, setReplyingTo] = useState<{ id: number; comment: string } | null>(null);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [subject, setSubject] = useState('');
-  const [comment, setComment] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const createTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     fetchThreads();
@@ -298,7 +294,7 @@ export default function CinemaPage() {
       {/* Header */}
       <header>
         <div className="header-left">
-          <a href="/" className="logo">0null</a>
+          <Link href="/" className="logo">0null</Link>
         </div>
       </header>
       <div className="header-divider" />
