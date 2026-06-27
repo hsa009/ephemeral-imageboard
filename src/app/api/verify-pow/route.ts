@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPoW } from '@/lib/pow';
 export async function POST(request: NextRequest) {

@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import '@/lib/polyfill';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
