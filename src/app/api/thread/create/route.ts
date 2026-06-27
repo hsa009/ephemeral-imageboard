@@ -1,5 +1,3 @@
-export const runtime = 'edge';
-
 import '@/lib/polyfill';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
@@ -7,7 +5,6 @@ import { getBucketName, uploadDirect, getReadSignedUrl } from '@/lib/s3';
 import { hashIP } from '@/lib/ip-hash';
 import { verifyPoW, getClientIP } from '@/lib/pow';
 import { classifyNiche } from '@/lib/classifier';
-
 export async function POST(request: NextRequest) {
   try {
     // Debug: log environment check (sanitized)
@@ -17,7 +14,6 @@ export async function POST(request: NextRequest) {
       s3Endpoint: !!process.env.IDRIVE_E2_ENDPOINT,
       s3Bucket: !!process.env.IDRIVE_E2_BUCKET,
     });
-
     if (!supabaseAdmin) {
       console.error('[Thread-Create] Supabase not initialized');
       return NextResponse.json({
@@ -25,7 +21,6 @@ export async function POST(request: NextRequest) {
         error: 'Supabase client not initialized',
       }, { status: 500 });
     }
-
     const formData = await request.formData();
     const subject = (formData.get('subject') as string)?.trim();
     const comment = (formData.get('comment') as string)?.trim();
@@ -33,7 +28,6 @@ export async function POST(request: NextRequest) {
     const powNonce = (formData.get('pow_nonce') as string)?.trim();
     const powTimestamp = parseInt(formData.get('pow_timestamp') as string);
     const username = (formData.get('username') as string)?.trim() || 'Anonymous';
-
     console.log('[Thread-Create] Received:', { 
       subjectLength: subject?.length,
       commentLength: comment?.length,
@@ -41,11 +35,9 @@ export async function POST(request: NextRequest) {
       hasPoW: !!powNonce,
       username: username !== 'Anonymous' ? username : '(anonymous)',
     });
-
     if (!subject || !comment) {
       return NextResponse.json({ error: 'Subject and comment required' }, { status: 400 });
     }
-
     // Verify PoW
     console.log('[Thread-Create] Verifying PoW...');
     const powResult = verifyPoW(powNonce, powTimestamp);
@@ -54,11 +46,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: powResult.message || 'Invalid proof of work', code: powResult.error }, { status: 403 });
     }
     console.log('[Thread-Create] PoW verified!');
-
     // Sanitize inputs
     const sanitizedSubject = subject.replace(/[<>]/g, '');
     const sanitizedComment = comment.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
     // Handle image upload
     let imageFilename = null;
     if (image && image.size > 0) {
@@ -74,7 +64,6 @@ export async function POST(request: NextRequest) {
         const contentType = image.type || 'image/png';
         const ext = image.name.split('.').pop() || contentType.split('/')[1] || 'png';
         imageFilename = `${imgHash}.${ext}`;
-
         await uploadDirect(imageFilename, uint8Array, contentType);
         console.log('[Thread-Create] Image uploaded:', imageFilename);
       } catch (imgErr) {
@@ -85,7 +74,6 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
     }
-
     // Hash IP for anonymity
     let author_ip = 'anonymous';
     try {
@@ -100,12 +88,10 @@ export async function POST(request: NextRequest) {
         error: hashErr instanceof Error ? hashErr.message : 'Hash failed',
       }, { status: 500 });
     }
-
     // Classify niche using AI
     console.log('[Thread-Create] Classifying niche...');
     const classification = await classifyNiche(subject, comment);
     const niche = classification.niche;
-
     // Insert into database
     console.log('[Thread-Create] Inserting thread...');
     const { data, error } = await supabaseAdmin
@@ -120,7 +106,6 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
-
     if (error) {
       console.error('[Thread-Create] Supabase error:', error);
       return NextResponse.json({
@@ -129,7 +114,6 @@ export async function POST(request: NextRequest) {
         errorCode: error.code,
       }, { status: 500 });
     }
-
     console.log('[Thread-Create] Success! Thread ID:', data.id);
     console.log('[GHOST BRAIN] Bridge to browser - Final niche:', niche);
     return NextResponse.json({

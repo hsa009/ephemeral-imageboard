@@ -1,16 +1,12 @@
-export const runtime = 'edge';
-
 import '@/lib/polyfill';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getReadSignedUrl } from '@/lib/s3';
-
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const niche = searchParams.get('niche');
     const search = searchParams.get('search');
-
     if (!supabaseAdmin) {
       return NextResponse.json({
         service: 'Supabase_Connection',
@@ -21,27 +17,22 @@ export async function GET(request: NextRequest) {
         }
       }, { status: 500 });
     }
-
     // Build query
     let query = supabaseAdmin
       .from('threads')
       .select('*')
       .order('last_bumped_at', { ascending: false })
       .limit(150);
-
     // Filter by niche if provided
     if (niche && niche !== 'all') {
       query = query.eq('niche', niche);
     }
-
     // Full-text search if provided
     if (search && search.trim()) {
       const searchTerm = search.trim().split(/\s+/).join(' & ');
       query = query.textSearch('fts', searchTerm);
     }
-
     const { data: threads, error } = await query;
-
     if (error) {
       console.error('Supabase error:', error);
       return NextResponse.json({
@@ -50,7 +41,6 @@ export async function GET(request: NextRequest) {
         errorCode: error.code,
       }, { status: 500 });
     }
-
     const threadsWithImages = await Promise.all(
       (threads || []).map(async (thread) => {
         if (thread.image_filename) {
@@ -64,7 +54,6 @@ export async function GET(request: NextRequest) {
         return thread;
       })
     );
-
     return NextResponse.json({ success: true, threads: threadsWithImages });
   } catch (error) {
     console.error('Error fetching threads:', error);

@@ -1,13 +1,9 @@
-export const runtime = 'edge';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPoW } from '@/lib/pow';
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { nonce, timestamp } = body;
-
     // Debug: log incoming request
     console.log('[Verify-PoW] Request:', { 
       noncePrefix: nonce?.substring(0, 10) || 'none',
@@ -15,7 +11,6 @@ export async function POST(request: NextRequest) {
       hasNonce: !!nonce,
       hasTimestamp: !!timestamp
     });
-
     if (!nonce || !timestamp) {
       console.error('[Verify-PoW] Missing required fields');
       return NextResponse.json({ 
@@ -24,9 +19,7 @@ export async function POST(request: NextRequest) {
         message: 'Missing nonce or timestamp' 
       }, { status: 400 });
     }
-
     const result = verifyPoW(nonce, timestamp);
-
     if (!result.valid) {
       console.error('[Verify-PoW] Verification failed:', result.error, result.message);
       return NextResponse.json({ 
@@ -35,7 +28,6 @@ export async function POST(request: NextRequest) {
         message: result.message 
       }, { status: 400 });
     }
-
     console.log('[Verify-PoW] Success!');
     return NextResponse.json({ valid: true });
     

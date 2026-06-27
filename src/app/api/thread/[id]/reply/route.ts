@@ -1,14 +1,10 @@
-export const runtime = 'edge';
-
 import '@/lib/polyfill';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { uploadDirect } from '@/lib/s3';
 import { hashIP } from '@/lib/ip-hash';
 import { verifyPoW, getClientIP } from '@/lib/pow';
-
 const BUMP_LIMIT = 10;
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -23,14 +19,11 @@ export async function POST(
         error: 'Supabase client not initialized',
       }, { status: 500 });
     }
-
     const { id } = await params;
     const threadId = parseInt(id);
-
     if (isNaN(threadId)) {
       return NextResponse.json({ error: 'Invalid thread ID' }, { status: 400 });
     }
-
     const formData = await request.formData();
     const comment = (formData.get('comment') as string)?.trim();
     const image = formData.get('image') as File | null;
@@ -38,7 +31,6 @@ export async function POST(
     const powTimestamp = parseInt(formData.get('pow_timestamp') as string);
     const username = (formData.get('username') as string)?.trim() || 'Anonymous';
     const replyToId = formData.get('reply_to_id') ? parseInt(formData.get('reply_to_id') as string) : null;
-
     console.log('[Reply-Create] Received:', { 
       threadId, 
       commentLength: comment?.length,
@@ -46,11 +38,9 @@ export async function POST(
       replyToId,
       username: username !== 'Anonymous' ? username : '(anonymous)'
     });
-
     if (!comment) {
       return NextResponse.json({ error: 'Comment required' }, { status: 400 });
     }
-
     // Verify PoW
     const powResult = verifyPoW(powNonce, powTimestamp);
     if (!powResult.valid) {
@@ -58,16 +48,13 @@ export async function POST(
       return NextResponse.json({ error: powResult.message || 'Invalid proof of work', code: powResult.error }, { status: 403 });
     }
     console.log('[Reply-Create] PoW verified!');
-
     const sanitizedComment = comment.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
     // Check thread exists and not locked
     const { data: thread, error: threadError } = await supabaseAdmin
       .from('threads')
       .select('*')
       .eq('id', threadId)
       .single();
-
     if (threadError || !thread) {
       console.error('[Reply-Create] Thread not found:', threadError);
       return NextResponse.json({
@@ -75,11 +62,9 @@ export async function POST(
         error: threadError?.message || 'Thread not found',
       }, { status: 404 });
     }
-
     if (thread.locked) {
       return NextResponse.json({ error: 'Thread is locked' }, { status: 403 });
     }
-
     // Handle image
     let imageFilename = null;
     if (image && image.size > 0) {
@@ -92,7 +77,6 @@ export async function POST(
         const imgHash = imgHashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
         const ext = image.name.split('.').pop() || 'webp';
         imageFilename = `${imgHash}.${ext}`;
-
         await uploadDirect(imageFilename, uint8Array, image.type);
         console.log('[Reply-Create] Image uploaded:', imageFilename);
       } catch (imgErr) {
@@ -103,7 +87,6 @@ export async function POST(
         }, { status: 500 });
       }
     }
-
     // Hash IP
     let author_ip = 'anonymous';
     try {
@@ -118,7 +101,6 @@ export async function POST(
         error: hashErr instanceof Error ? hashErr.message : 'Hash failed',
       }, { status: 500 });
     }
-
     // Insert reply
     console.log('[Reply-Create] Inserting reply...');
     const { data: reply, error: replyError } = await supabaseAdmin
@@ -133,7 +115,6 @@ export async function POST(
       })
       .select()
       .single();
-
     if (replyError) {
       console.error('[Reply-Create] Supabase error:', replyError);
       return NextResponse.json({
@@ -141,7 +122,6 @@ export async function POST(
         error: replyError.message,
       }, { status: 500 });
     }
-
     // Bump thread if under limit
     const shouldBump = thread.bump_count < BUMP_LIMIT;
     if (shouldBump) {
@@ -153,7 +133,6 @@ export async function POST(
         })
         .eq('id', threadId);
     }
-
     console.log('[Reply-Create] Success! Reply ID:', reply.id);
     return NextResponse.json({ success: true, reply });
     
