@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "rm -rf .next/cache && next build",
     "preview": "npx @cloudflare/next-on-pages@1 --preview",
     "deploy": "npx @cloudflare/next-on-pages@1",
     "lint": "eslint"
