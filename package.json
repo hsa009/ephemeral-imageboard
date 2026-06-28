@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "rm -rf .next/cache && next build",
-    "preview": "npx @cloudflare/next-on-pages@1 --preview",
-    "deploy": "npx @cloudflare/next-on-pages@1",
+    "cf-build": "npm run build && npx @cloudflare/next-on-pages@1 && find .vercel/output/static/_worker.js/__next-on-pages-dist__/functions -name '*.func.js' -exec sed -i 's/from\"async_hooks\"/from\"node:async_hooks\"/g' {} +",
+    "preview": "npx wrangler pages dev .vercel/output/static --compatibility-flags nodejs_compat --port 8787",
+    "deploy": "npx wrangler pages deploy .vercel/output/static --project-name 0null --branch main --no-bundle",
     "lint": "eslint"
   },
   "dependencies": {
