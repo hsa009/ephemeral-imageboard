@@ -204,9 +204,9 @@ export default function Home() {
   const handleSetReplyingTo = (data: { id: number; comment: string }) => {
     setReplyingTo(data);
     setTimeout(() => {
-      const replyForm = document.querySelector('.reply-form');
-      if (replyForm) {
-        replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const composer = document.querySelector('.reply-composer');
+      if (composer) {
+        composer.scrollIntoView({ behavior: 'smooth', block: 'center' });
         replyTextareaRef.current?.focus();
       }
     }, 100);
@@ -259,9 +259,9 @@ export default function Home() {
     },
     onSubmit: () => {
       if (selectedThread) {
-        // Trigger reply form submit
-        const form = document.querySelector('.reply-form form');
-        if (form) (form as HTMLFormElement).requestSubmit();
+        // Trigger reply submit
+        const btn = document.querySelector('.btn-reply-submit') as HTMLButtonElement;
+        if (btn) btn.click();
       } else if (showCreateForm) {
         // Trigger create form submit
         const form = document.querySelector('.create-form form');
@@ -478,8 +478,9 @@ export default function Home() {
     }
   };
 
-  const handleReply = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleReply = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (!replyComment.trim()) return;
     if (!selectedThread || !currentPoW) return;
     setLoading(true);
     setPowLoading(true);
@@ -546,6 +547,11 @@ export default function Home() {
     return `${h}:${m}`;
   };
 
+  const getInitials = (username?: string): string => {
+    if (!username || username === 'Anonymous') return '?';
+    return username.slice(0, 2).toUpperCase();
+  };
+
   // Build nested reply tree from flat array
   const replyTree = useMemo(() => {
     if (!replies || replies.length === 0) return [];
@@ -577,6 +583,21 @@ export default function Home() {
     return roots;
   }, [replies]);
 
+  const replyMap = useMemo(() => {
+    const map = new Map<number, Reply>();
+    replies.forEach(r => map.set(r.id, r));
+    return map;
+  }, [replies]);
+
+  const scrollToComment = useCallback((id: number) => {
+    const el = document.getElementById(`comment-${id}`);
+    if (el) {
+      el.classList.add('highlighted');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => el.classList.remove('highlighted'), 2000);
+    }
+  }, []);
+
   const renderReplyTree = (nodes: (Reply & { children: Reply[] })[], depth = 0) => {
     return nodes.map((reply) => {
       const isCollapsed = collapsedReplies[reply.id];
@@ -584,56 +605,80 @@ export default function Home() {
       const showCollapse = depth === 0 && childCount >= 5;
       const myPost = isMyPost(reply.id);
       const hasChildren = reply.children && reply.children.length > 0;
-      const depthClass = depth > 0 ? `depth-${Math.min(depth, 3)}` : '';
+      const parentReply = reply.reply_to_id ? replyMap.get(reply.reply_to_id) : null;
+      const initials = getInitials(reply.username);
+      const reactionKeys = Object.keys(reply.reactions || {});
 
       return (
-        <div key={reply.id} className={`reply ${depthClass} ${myPost ? 'highlighted' : ''} ${reply.isNew ? 'is-new' : ''}`}>
-          <div className="quick-actions">
-            <button className="quick-action-btn" onClick={() => handleSetReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>Reply</button>
-            <button className="quick-action-btn" onClick={() => navigator.clipboard.writeText(`>>#${reply.id}`)}>Link</button>
-            <button className="quick-action-btn">Report</button>
-          </div>
-          <div className="reply-header">
-            {reply.reply_to_id && <span className="quote-box">&gt;&gt;#{reply.reply_to_id}</span>}
-            {reply.username && reply.username !== 'Anonymous' && (
-              <span className="username-display">{reply.username}</span>
-            )}
-            {myPost && <span className="meta-pill meta-pill--you">You</span>}
-            <span className="meta-pill post-id" dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
-            <span className="meta-pill">{redactTime(reply.created_at)}</span>
-          </div>
-          <div className="reply-content" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
-          {reply.image_filename && <img src={reply.image_filename} alt="" className={`reply-image ${expandedImage === reply.image_filename ? "expanded" : ""}`} loading="lazy" onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)} />}
-          <div className="reply-footer">
-            <div className="reactions" style={{ position: 'relative' }}>
-              <button 
-                className="reaction-picker-trigger"
-                onClick={() => toggleReactionPicker('reply', reply.id)}
-              >
-                😀
-              </button>
-              {openReactions?.type === 'reply' && openReactions?.id === reply.id && (
-                <div className="reaction-picker">
-                  {EMOJI_LIST.map(emoji => (
-                    <button
-                      key={emoji}
-                      className={`reaction-btn ${hasReacted('reply', reply.id, emoji) ? 'reacted' : ''}`}
-                      onClick={() => handleReactionClick('reply', reply.id, emoji)}
-                    >
-                      <span className="reaction-emoji">{emoji}</span>
-                      {reply.reactions?.[emoji] && <span className="reaction-count">{reply.reactions[emoji]}</span>}
-                    </button>
-                  ))}
+        <div key={reply.id} className={`comment ${reply.isNew ? 'is-new' : ''}`} id={`comment-${reply.id}`}>
+          <div className="comment-body">
+            <div className="avatar" title={reply.username || 'Anonymous'}>{initials}</div>
+            <div className="comment-content">
+              <div className="comment-header">
+                <span className={`username ${myPost ? 'you' : ''}`}>{reply.username || 'Anonymous'}</span>
+                {myPost && <span className="badge badge-you">You</span>}
+                <span className="comment-time" title={new Date(reply.created_at).toLocaleString()}>{redactTime(reply.created_at)}</span>
+                <span className="comment-time" style={{ color: 'var(--warning)' }} dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
+              </div>
+              {parentReply && (
+                <div className="replying-to">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M9 14L4 9l5-5"/>
+                    <path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v0a5.5 5.5 0 01-5.5 5.5H11"/>
+                  </svg>
+                  Replying to <span className="reply-target" data-target={reply.reply_to_id} onClick={() => reply.reply_to_id && scrollToComment(reply.reply_to_id)}>@{parentReply.username || 'Anonymous'}</span>
                 </div>
               )}
+              <div className="comment-text" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
+              {reply.image_filename && (
+                <div className="comment-image" onClick={() => setExpandedImage(expandedImage === reply.image_filename ? null : reply.image_filename)}>
+                  <img src={reply.image_filename} alt="" loading="lazy" />
+                </div>
+              )}
+              <div className="reactions-bar">
+                {reactionKeys.map(emoji => {
+                  const count = reply.reactions[emoji] as number;
+                  const active = hasReacted('reply', reply.id, emoji);
+                  return (
+                    <button key={emoji} className={`reaction ${active ? 'active' : ''}`} onClick={() => handleReactionClick('reply', reply.id, emoji)}>
+                      <span>{emoji}</span>
+                      <span className="reaction-count">{count}</span>
+                    </button>
+                  );
+                })}
+                <button className="add-reaction" onClick={() => toggleReactionPicker('reply', reply.id)}>+</button>
+                <div className={`emoji-picker ${openReactions?.type === 'reply' && openReactions?.id === reply.id ? 'visible' : ''}`}>
+                  {EMOJI_LIST.map(emoji => (
+                    <span key={emoji} className="emoji-option" onClick={() => handleReactionClick('reply', reply.id, emoji)}>{emoji}</span>
+                  ))}
+                </div>
+              </div>
+              <div className="comment-actions">
+                <button className="action-btn reply-btn" onClick={() => handleSetReplyingTo({ id: reply.id, comment: reply.comment.slice(0, 50) })}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                  Reply
+                </button>
+                <button className="action-btn" onClick={() => navigator.clipboard.writeText(`>>#${reply.id}`)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                  Link
+                </button>
+              </div>
             </div>
           </div>
-          {showCollapse && !isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Hide {childCount - 3} more replies</button>}
-          {showCollapse && isCollapsed && <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>Show {childCount} replies</button>}
-
-          {/* Render nested children */}
+          {showCollapse && !isCollapsed && (
+            <button className="collapse-toggle" onClick={() => toggleCollapse(reply.id)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+              Hide {childCount - 3} replies
+            </button>
+          )}
+          {showCollapse && isCollapsed && (
+            <button className="collapse-toggle collapsed" onClick={() => toggleCollapse(reply.id)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+              Show {childCount} replies
+            </button>
+          )}
           {!showCollapse && hasChildren && !isCollapsed && (
-            <div className="nested-replies">
+            <div className="replies">
               {renderReplyTree(reply.children as (Reply & { children: Reply[] })[], depth + 1)}
             </div>
           )}
@@ -749,19 +794,42 @@ export default function Home() {
             {repliesLoading ? (
               <div className="loading">Loading</div>
             ) : (
-              renderReplyTree(replyTree)
+              <div className="comments-container">
+                {renderReplyTree(replyTree)}
+              </div>
             )}
-            {pendingReplies.map(reply => <div key={reply.id} className="reply pending"><div className="reply-header"><span>Posting...</span></div><div className="reply-content">{reply.comment}</div></div>)}
-            <div className="reply-form">
-              {replyingTo && <div className="reply-indicator">Replying to #{replyingTo.id} <button onClick={() => setReplyingTo(null)} className="cancel-reply">X</button></div>}
-              <form onSubmit={handleReply}>
-                <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} className="username-input" />
-                <textarea ref={replyTextareaRef} placeholder="Write your reply..." value={replyComment} onChange={(e) => setReplyComment(e.target.value)} required />
-                <div className="form-actions">
-                  <div className="file-input"><label><input type="file" accept="image/*" onChange={(e) => setReplyImage(e.target.files?.[0] || null)} /></label></div>
-                  <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>{powLoading ? "Verifying..." : loading ? "Posting..." : "Reply"}</button>
+            {pendingReplies.map(reply => (
+              <div key={reply.id} className="comment pending">
+                <div className="comment-body">
+                  <div className="avatar">?</div>
+                  <div className="comment-content">
+                    <div className="comment-header">
+                      <span className="username">Posting...</span>
+                    </div>
+                    <div className="comment-text">{reply.comment}</div>
+                  </div>
                 </div>
-              </form>
+              </div>
+            ))}
+            <div className={`reply-composer ${replyingTo ? 'replying' : ''}`} id="reply-composer">
+              <div className="composer-header">
+                <span className="composer-label">{replyingTo ? `Replying to #${replyingTo.id}` : 'Replying to thread'}</span>
+                <button className={`composer-cancel ${!replyingTo ? 'hidden' : ''}`} onClick={() => setReplyingTo(null)}>Cancel</button>
+              </div>
+              <div className="composer-body">
+                <input type="text" className="name-input" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} aria-label="Your name (optional)" />
+                <textarea ref={replyTextareaRef} className="reply-textarea" placeholder="Write your reply..." value={replyComment} onChange={(e) => setReplyComment(e.target.value)} rows={3} aria-label="Write your reply" />
+                <div className="composer-footer">
+                  <div className="composer-actions">
+                    <button className="btn-attach" title="Attach image" aria-label="Attach image" onClick={() => document.getElementById('reply-image-input')?.click()}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                      <span>Image</span>
+                    </button>
+                    <input type="file" id="reply-image-input" accept="image/*" onChange={(e) => setReplyImage(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+                  </div>
+                  <button className="btn-reply-submit" onClick={handleReply} disabled={loading || powLoading}>{powLoading ? "Verifying..." : loading ? "Posting..." : "Reply"}</button>
+                </div>
+              </div>
             </div>
           </div>
         )}
