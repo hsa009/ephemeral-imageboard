@@ -946,7 +946,6 @@ export default function Home() {
             )}
           </button>
           <nav className="nav-links">
-            <a href="/chat">Chat</a>
             <a href="#" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); }}>New Thread</a>
           </nav>
           <div className="search-container">
