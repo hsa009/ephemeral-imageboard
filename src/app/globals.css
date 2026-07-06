@@ -1706,6 +1706,15 @@ header h1 span {
   background: var(--danger);
 }
 
+/* Form Error */
+.form-error {
+  padding: 12px 20px;
+  background: rgba(239, 91, 91, 0.1);
+  color: var(--danger);
+  font-size: 0.85rem;
+  border-top: 1px solid rgba(239, 91, 91, 0.2);
+}
+
 /* Form Footer */
 .form-footer {
   display: flex;

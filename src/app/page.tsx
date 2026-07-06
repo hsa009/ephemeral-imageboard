@@ -200,6 +200,7 @@ export default function Home() {
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const createTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (imageFile) {
@@ -434,6 +435,11 @@ export default function Home() {
 
   const handleCreateThread = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault();
+    setCreateError(null);
+    if (!subject.trim() || !comment.trim()) {
+      setCreateError("Subject and comment are required.");
+      return;
+    }
     if (!currentPoW) return;
     setLoading(true);
     setPowLoading(true);
@@ -477,9 +483,14 @@ export default function Home() {
         // Refresh data
         fetchThreads();
         setCurrentPoW(await generatePoW());
+      } else {
+        const data = await res.json().catch(() => ({ error: 'Request failed' }));
+        setCreateError(data.error || 'Failed to create thread');
+        playError();
       }
     } catch (e) { 
       console.error("Failed to create thread:", e);
+      setCreateError('Network error — check your connection');
       playError();
     }
     finally { 
@@ -1001,7 +1012,7 @@ export default function Home() {
           <div className="thread-form-container" role="dialog" aria-modal="true" aria-labelledby="form-title">
             <div className="form-header">
               <h2 className="form-title" id="form-title">New Thread</h2>
-              <button className="btn-close" onClick={() => setShowCreateForm(false)} aria-label="Close">
+              <button className="btn-close" onClick={() => { setShowCreateForm(false); setCreateError(null); }} aria-label="Close">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
@@ -1016,7 +1027,7 @@ export default function Home() {
                 </div>
                 <div className="field-group">
                   <label className="field-label" htmlFor="thread-subject">Subject</label>
-                  <input type="text" id="thread-subject" className="text-input" placeholder="Thread title" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={120} required autoComplete="off" />
+                  <input type="text" id="thread-subject" className="text-input" placeholder="Thread title" value={subject} onChange={(e) => { setSubject(e.target.value); setCreateError(null); }} maxLength={120} required autoComplete="off" />
                 </div>
               </div>
               <div className="field-group">
@@ -1048,6 +1059,7 @@ export default function Home() {
                 )}
               </div>
             </div>
+            {createError && <div className="form-error">{createError}</div>}
             <div className="form-footer">
               <div></div>
               <button type="button" className="btn-create" onClick={handleCreateThread} disabled={loading || powLoading}>
