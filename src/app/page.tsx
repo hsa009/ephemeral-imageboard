@@ -589,6 +589,28 @@ export default function Home() {
     return map;
   }, [replies]);
 
+  const userNumberMap = useMemo(() => {
+    const map = new Map<number, string>();
+    const sorted = [...replies].sort((a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    let counter = 0;
+    sorted.forEach(r => {
+      if (!r.username || r.username === 'Anonymous') {
+        counter++;
+        map.set(r.id, `User #${counter}`);
+      } else {
+        map.set(r.id, r.username);
+      }
+    });
+    return map;
+  }, [replies]);
+
+  const getUserLabel = useCallback((reply: Reply): string => {
+    if (reply.username && reply.username !== 'Anonymous') return reply.username;
+    return userNumberMap.get(reply.id) || 'User #?';
+  }, [userNumberMap]);
+
   const scrollToComment = useCallback((id: number) => {
     const el = document.getElementById(`comment-${id}`);
     if (el) {
@@ -612,10 +634,10 @@ export default function Home() {
       return (
         <div key={reply.id} className={`comment ${reply.isNew ? 'is-new' : ''}`} id={`comment-${reply.id}`}>
           <div className="comment-body">
-            <div className="avatar" title={reply.username || 'Anonymous'}>{initials}</div>
+            <div className="avatar" title={getUserLabel(reply)}>{initials}</div>
             <div className="comment-content">
               <div className="comment-header">
-                <span className={`username ${myPost ? 'you' : ''}`}>{reply.username || 'Anonymous'}</span>
+                <span className={`username ${myPost ? 'you' : ''}`}>{getUserLabel(reply)}</span>
                 {myPost && <span className="badge badge-you">You</span>}
                 <span className="comment-time" title={new Date(reply.created_at).toLocaleString()}>{redactTime(reply.created_at)}</span>
                 <span className="comment-time" style={{ color: 'var(--warning)' }} dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
@@ -626,7 +648,7 @@ export default function Home() {
                     <path d="M9 14L4 9l5-5"/>
                     <path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v0a5.5 5.5 0 01-5.5 5.5H11"/>
                   </svg>
-                  Replying to <span className="reply-target" data-target={reply.reply_to_id} onClick={() => reply.reply_to_id && scrollToComment(reply.reply_to_id)}>@{parentReply.username || 'Anonymous'}</span>
+                  Replying to <span className="reply-target" data-target={reply.reply_to_id} onClick={() => reply.reply_to_id && scrollToComment(reply.reply_to_id)}>@{getUserLabel(parentReply)}</span>
                 </div>
               )}
               <div className="comment-text" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />

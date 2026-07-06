@@ -620,6 +620,7 @@ header h1 span {
   gap: 12px;
   padding: 14px 16px;
   border-radius: var(--radius-md);
+  background-color: #19191e;
   transition: var(--transition);
 }
 
