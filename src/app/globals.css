@@ -1460,7 +1460,6 @@ header h1 span {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  max-width: 640px;
   overflow: hidden;
   animation: formEnter 0.25s ease-out;
 }
