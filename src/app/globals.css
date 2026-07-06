@@ -438,6 +438,11 @@ header h1 span {
   border: 1px solid var(--border-color);
   padding: 15px;
   margin-bottom: 20px;
+  max-width: 900px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
 }
 
 .thread-op-header {
@@ -593,10 +598,13 @@ header h1 span {
 /* Comments Container */
 .comments-container {
   max-width: 900px;
-  margin: 0 auto;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  box-sizing: border-box;
 }
 
 /* Individual Comment */
@@ -622,6 +630,11 @@ header h1 span {
   border-radius: var(--radius-md);
   background-color: #19191e;
   transition: var(--transition);
+}
+
+.comments-container > .comment > .comment-body {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .comment-body:hover {
@@ -920,6 +933,7 @@ header h1 span {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  box-sizing: border-box;
   transition: var(--transition);
 }
 
@@ -1026,6 +1040,8 @@ header h1 span {
   padding: 16px;
   margin: 20px auto 40px;
   max-width: 900px;
+  width: 100%;
+  box-sizing: border-box;
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
 }
