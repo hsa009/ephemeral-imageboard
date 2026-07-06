@@ -199,6 +199,17 @@ export default function Home() {
   // Refs for focusing inputs
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const createTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (imageFile) {
+      const url = URL.createObjectURL(imageFile);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [imageFile]);
 
   // Auto-scroll to reply form when user clicks Reply
   const handleSetReplyingTo = (data: { id: number; comment: string }) => {
@@ -264,8 +275,8 @@ export default function Home() {
         if (btn) btn.click();
       } else if (showCreateForm) {
         // Trigger create form submit
-        const form = document.querySelector('.create-form form');
-        if (form) (form as HTMLFormElement).requestSubmit();
+        const btn = document.querySelector('.btn-create') as HTMLButtonElement;
+        if (btn) btn.click();
       }
     }
   });
@@ -421,8 +432,8 @@ export default function Home() {
     finally { setRepliesLoading(false); }
   };
 
-  const handleCreateThread = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateThread = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (!currentPoW) return;
     setLoading(true);
     setPowLoading(true);
@@ -987,28 +998,62 @@ export default function Home() {
             + Start a New Thread
           </button>
         ) : (
-          <div className="create-form">
-            <div className="create-form-header">
-              <span>New Thread</span>
-              <button className="close-create-btn" onClick={() => setShowCreateForm(false)}>X</button>
+          <div className="thread-form-container" role="dialog" aria-modal="true" aria-labelledby="form-title">
+            <div className="form-header">
+              <h2 className="form-title" id="form-title">New Thread</h2>
+              <button className="btn-close" onClick={() => setShowCreateForm(false)} aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
-            <form onSubmit={handleCreateThread}>
+            <div className="form-body">
               <div className="form-row">
-                <input type="text" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} />
-                <input type="text" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
+                <div className="field-group">
+                  <label className="field-label" htmlFor="thread-name">Name <span className="optional">(optional)</span></label>
+                  <input type="text" id="thread-name" className="text-input" placeholder="Anonymous" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} autoComplete="off" />
+                </div>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="thread-subject">Subject</label>
+                  <input type="text" id="thread-subject" className="text-input" placeholder="Thread title" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={120} required autoComplete="off" />
+                </div>
               </div>
-              <textarea 
-                ref={createTextareaRef}
-                placeholder="Comment" 
-                value={comment} 
-                onChange={(e) => setComment(e.target.value)} 
-                required 
-              />
-              <div className="form-actions">
-                <div className="file-input"><label><input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /></label></div>
-                <button type="submit" className="btn btn-primary" disabled={loading || powLoading}>{powLoading ? "Computing PoW..." : loading ? "Posting..." : "Create"}</button>
+              <div className="field-group">
+                <div className="field-footer">
+                  <label className="field-label" htmlFor="thread-comment">Comment</label>
+                  <span className={`char-count${comment.length > 1800 ? ' warning' : ''}`}>{comment.length} / 2000</span>
+                </div>
+                <textarea id="thread-comment" ref={createTextareaRef} className="textarea-input" placeholder="What's on your mind?" value={comment} onChange={(e) => setComment(e.target.value)} maxLength={2000} rows={5} required />
               </div>
-            </form>
+              <div className="field-group">
+                <label className="field-label">Image</label>
+                <div className="file-upload">
+                  <input type="file" id="thread-image" className="file-upload-input" accept="image/*" onChange={(e) => { setImageFile(e.target.files?.[0] || null); e.target.value = ''; }} />
+                  <button type="button" className="file-upload-button" tabIndex={-1} onClick={() => document.getElementById('thread-image')?.click()}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    Choose File
+                  </button>
+                  <span className="file-name">{imageFile ? imageFile.name : 'No file chosen'}</span>
+                </div>
+                {imageFile && (
+                  <div className="image-preview visible">
+                    <img src={previewUrl!} alt="Preview" />
+                    <button type="button" className="btn-remove-image" onClick={() => { setImageFile(null); }}>×</button>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="form-footer">
+              <div></div>
+              <button type="button" className="btn-create" onClick={handleCreateThread} disabled={loading || powLoading}>
+                {powLoading ? "Computing PoW..." : loading ? "Posting..." : "Create"}
+              </button>
+            </div>
           </div>
         )}
       </div>
