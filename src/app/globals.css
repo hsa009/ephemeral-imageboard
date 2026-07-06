@@ -592,8 +592,6 @@ header h1 span {
 
 /* Comments Container */
 .comments-container {
-  max-width: 900px;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1024,8 +1022,7 @@ header h1 span {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 16px;
-  margin: 20px auto 40px;
-  max-width: 900px;
+  margin: 20px 0 40px;
   box-shadow: var(--shadow-sm);
   transition: var(--transition);
 }
