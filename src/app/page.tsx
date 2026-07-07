@@ -183,6 +183,7 @@ export default function Home() {
   const [replyComment, setReplyComment] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [replyImage, setReplyImage] = useState<File | null>(null);
+  const [replyPreviewUrl, setReplyPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [repliesLoading, setRepliesLoading] = useState(false);
   const [powLoading, setPowLoading] = useState(false);
@@ -219,6 +220,16 @@ export default function Home() {
       setPreviewUrl(null);
     }
   }, [imageFile]);
+
+  useEffect(() => {
+    if (replyImage) {
+      const url = URL.createObjectURL(replyImage);
+      setReplyPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setReplyPreviewUrl(null);
+    }
+  }, [replyImage]);
 
   // Auto-scroll to reply form when user clicks Reply
   const handleSetReplyingTo = (data: { id: number; comment: string }) => {
@@ -905,6 +916,12 @@ export default function Home() {
                       <span>Image</span>
                     </button>
                     <input type="file" id="reply-image-input" accept="image/*" onChange={(e) => setReplyImage(e.target.files?.[0] || null)} style={{ display: 'none' }} />
+                    {replyImage && replyPreviewUrl && (
+                      <div className="image-preview visible">
+                        <img src={replyPreviewUrl} alt="Preview" />
+                        <button type="button" className="btn-remove-image" onClick={() => { setReplyImage(null); }}>×</button>
+                      </div>
+                    )}
                   </div>
                   <button className="btn-reply-submit" onClick={handleReply} disabled={loading || powLoading}>{powLoading ? "Verifying..." : loading ? "Posting..." : "Reply"}</button>
                 </div>
