@@ -542,10 +542,12 @@ header h1 span {
   flex: 1;
 }
 
-.name-row .text-input.use-handle,
-.name-row .name-input.use-handle {
-  opacity: 0.35;
-  pointer-events: none;
+.handle-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
 }
 
 .identity-toggle {
@@ -618,7 +620,7 @@ header h1 span {
 }
 
 .username-glow.off {
-  color: var(--text-muted);
+  color: var(--text-primary);
   font-weight: 400;
   text-shadow: none;
 }

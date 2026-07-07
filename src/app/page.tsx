@@ -678,7 +678,12 @@ export default function Home() {
                     <path d="M9 14L4 9l5-5"/>
                     <path d="M4 9h10.5a5.5 5.5 0 015.5 5.5v0a5.5 5.5 0 01-5.5 5.5H11"/>
                   </svg>
-                  Replying to <span className="reply-target" data-target={reply.reply_to_id} onClick={() => reply.reply_to_id && scrollToComment(reply.reply_to_id)}>@{getUserLabel(parentReply)}</span>
+                  Replying to <span className="reply-target" data-target={reply.reply_to_id} onClick={() => reply.reply_to_id && scrollToComment(reply.reply_to_id)}>
+                    <span className={`username-glow${(parentReply as Reply).is_verified_handle ? '' : ' off'}`}>@{getUserLabel(parentReply as Reply)}</span>
+                    <span className={`tag-stack${(parentReply as Reply).is_verified_handle ? '' : ' off'}`}>
+                      <span className="tag tag-verified">✓</span>
+                    </span>
+                  </span>
                 </div>
               )}
               <div className="comment-text" dangerouslySetInnerHTML={{ __html: formatQuote(reply.comment) }} />
@@ -875,7 +880,16 @@ export default function Home() {
               </div>
               <div className="composer-body">
                 <div className="name-row">
-                  <input type="text" className={`name-input${useHandle ? ' use-handle' : ''}`} placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} aria-label="Your name (optional)" disabled={useHandle} />
+                  {useHandle && walletUsername ? (
+                    <div className="handle-preview">
+                      <span className="username-glow">{walletUsername}</span>
+                      <span className="tag-stack">
+                        <span className="tag tag-verified">✓</span>
+                      </span>
+                    </div>
+                  ) : (
+                    <input type="text" className="name-input" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} aria-label="Your name (optional)" />
+                  )}
                   <div className={`identity-toggle${!isAuthenticated ? ' disabled' : ''}`} role="switch" aria-checked={useHandle} tabIndex={0} onClick={() => { if (isAuthenticated) { setUseHandle(v => !v); setUsername(''); } }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && isAuthenticated) { e.preventDefault(); setUseHandle(v => !v); setUsername(''); } }}>
                     <div className="pill-track">
                       <div className="pill-knob"></div>
@@ -1046,7 +1060,16 @@ export default function Home() {
                 <div className="field-group">
                   <label className="field-label" htmlFor="thread-name">Name <span className="optional">(optional)</span></label>
                     <div className="name-row">
-                    <input type="text" id="thread-name" className={`text-input${useHandle ? ' use-handle' : ''}`} placeholder="Anonymous" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} autoComplete="off" disabled={useHandle} />
+                    {useHandle && walletUsername ? (
+                      <div className="handle-preview">
+                        <span className="username-glow">{walletUsername}</span>
+                        <span className="tag-stack">
+                          <span className="tag tag-verified">✓</span>
+                        </span>
+                      </div>
+                    ) : (
+                      <input type="text" id="thread-name" className="text-input" placeholder="Anonymous" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} autoComplete="off" />
+                    )}
                     <div className={`identity-toggle${!isAuthenticated ? ' disabled' : ''}`} role="switch" aria-checked={useHandle} tabIndex={0} onClick={() => { if (isAuthenticated) { setUseHandle(v => !v); setUsername(''); } }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && isAuthenticated) { e.preventDefault(); setUseHandle(v => !v); setUsername(''); } }}>
                       <div className="pill-track">
                         <div className="pill-knob"></div>
