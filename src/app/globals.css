@@ -1966,32 +1966,171 @@ header h1 span {
   to { transform: rotate(360deg); }
 }
 
-.wallet-adapter-modal-wrapper {
-  background: var(--bg-secondary) !important;
-  border: 1px solid var(--border-color) !important;
-  font-family: monospace !important;
+.wallet-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 15, 25, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
 }
-.wallet-adapter-modal-title {
-  color: var(--text-primary) !important;
-  font-size: 1rem !important;
-  font-weight: normal !important;
+
+.wallet-modal {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+  animation: modalIn 0.25s ease-out;
 }
-.wallet-adapter-modal-list li button {
-  color: var(--text-primary) !important;
-  border-color: var(--border-color) !important;
-  font-size: 0.8rem !important;
-  font-family: monospace !important;
-  background: transparent !important;
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
-.wallet-adapter-modal-list li button:hover {
-  background: var(--bg-primary) !important;
-  border-color: var(--accent) !important;
+
+.wallet-modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-.wallet-adapter-modal-list-more {
-  color: var(--accent) !important;
+
+.wallet-modal-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-family: monospace;
 }
-.wallet-adapter-modal-list-more:hover {
-  background: transparent !important;
+
+.wallet-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.wallet-modal-close:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.03);
+}
+
+.wallet-modal-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.wallet-option {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 2px solid transparent;
+}
+
+.wallet-option:hover {
+  background: rgba(255,255,255,0.015);
+  border-left-color: var(--accent);
+}
+
+.wallet-option-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wallet-option-icon.ph {
+  background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(139,92,246,0.08));
+  border: 1px solid rgba(167,139,250,0.2);
+}
+
+.wallet-option-icon.sf {
+  background: linear-gradient(135deg, rgba(250,204,21,0.15), rgba(234,179,8,0.08));
+  border: 1px solid rgba(250,204,21,0.2);
+}
+
+.wallet-option-info {
+  flex: 1;
+}
+
+.wallet-option-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.wallet-option-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.wallet-option-arrow {
+  color: var(--text-muted);
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.wallet-option:hover .wallet-option-arrow {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.wallet-divider {
+  margin: 0 1.5rem;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.wallet-connecting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  gap: 1rem;
+}
+
+.wallet-connecting-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(255,255,255,0.06);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.wallet-connecting-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.wallet-connecting-sub {
+  font-family: monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
 }
 
 .thread-niche {
