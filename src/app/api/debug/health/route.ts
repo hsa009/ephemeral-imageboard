@@ -81,8 +81,10 @@ export async function GET() {
   }
   // Test IP Hashing / Web Crypto
   try {
-    const testData = new TextEncoder().encode('test-ip:test-salt');
-    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', testData);
+    const encoded = new TextEncoder().encode('test-ip:test-salt');
+    const buf = new Uint8Array(encoded.length);
+    buf.set(encoded);
+    const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', buf);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 10);
     

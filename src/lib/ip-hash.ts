@@ -12,8 +12,10 @@ export async function hashIP(ip: string): Promise<string> {
   const combined = `${ip.trim()}:${salt}`;
   
   const encoder = new TextEncoder();
-  const data = encoder.encode(combined);
-  const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data);
+  const encoded = encoder.encode(combined);
+  const buf = new Uint8Array(encoded.length);
+  buf.set(encoded);
+  const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', buf);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 10);
   

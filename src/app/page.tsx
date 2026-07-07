@@ -6,6 +6,7 @@ import VoidTimer from "@/components/VoidTimer";
 import { useSound, playSuccess, playError, playGhost } from "@/hooks/useSound";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { isThreadExpired } from "@/components/VoidTimer";
+import ConnectWallet from "@/components/ConnectWallet";
 
 interface Thread {
   id: number;
@@ -133,8 +134,10 @@ async function generatePoW(): Promise<{ nonce: string; timestamp: number }> {
     let count = 0;
     const check = async () => {
       const encoder = new TextEncoder();
-      const hashData = encoder.encode(data + count);
-      const digest = await crypto.subtle.digest("SHA-256", hashData);
+      const encoded = encoder.encode(data + count);
+      const hashBuf = new Uint8Array(encoded.length);
+      hashBuf.set(encoded);
+      const digest = await crypto.subtle.digest("SHA-256", hashBuf);
       const arr = new Uint8Array(digest);
       hash = Array.from(arr).map((b) => b.toString(16).padStart(2, "0")).join("");
       if (hash.startsWith("0000")) {
@@ -1000,6 +1003,8 @@ export default function Home() {
         >
           RANDOM
         </button>
+        <div className="niche-spacer" />
+        <ConnectWallet />
       </div>
       {/* Inline Thread Creation Form */}
       <div className="inline-create">
