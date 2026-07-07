@@ -1907,51 +1907,58 @@ header h1 span {
   flex: 1;
 }
 
-.connect-wallet {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: 6px 14px;
-  font-size: 0.75rem;
-  font-family: monospace;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-radius: 2px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.wallet-adapter-button {
+  background: transparent !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-secondary) !important;
+  padding: 6px 14px !important;
+  font-size: 0.75rem !important;
+  font-family: monospace !important;
+  border-radius: 2px !important;
+  height: auto !important;
+  line-height: normal !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+.wallet-adapter-button:hover {
+  border-color: var(--accent) !important;
+  color: var(--text-primary) !important;
+  background: transparent !important;
+}
+.wallet-adapter-button[disabled] {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+.wallet-adapter-button-start-icon {
+  display: none;
 }
 
-.connect-wallet:hover {
-  border-color: var(--accent);
-  color: var(--text-primary);
+.wallet-adapter-modal-wrapper {
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  font-family: monospace !important;
 }
-
-.connect-wallet:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.wallet-adapter-modal-title {
+  color: var(--text-primary) !important;
+  font-size: 1rem !important;
+  font-weight: normal !important;
 }
-
-.wallet-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--success);
-  display: inline-block;
+.wallet-adapter-modal-list li button {
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+  font-size: 0.8rem !important;
+  font-family: monospace !important;
+  background: transparent !important;
 }
-
-.wallet-spinner {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  border: 1.5px solid var(--text-muted);
-  border-top-color: var(--accent);
-  animation: walletSpin 0.6s linear infinite;
-  display: inline-block;
+.wallet-adapter-modal-list li button:hover {
+  background: var(--bg-primary) !important;
+  border-color: var(--accent) !important;
 }
-
-@keyframes walletSpin {
-  to { transform: rotate(360deg); }
+.wallet-adapter-modal-list-more {
+  color: var(--accent) !important;
+}
+.wallet-adapter-modal-list-more:hover {
+  background: transparent !important;
 }
 
 .thread-niche {
