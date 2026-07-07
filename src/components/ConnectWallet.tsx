@@ -73,7 +73,7 @@ export default function ConnectWallet() {
         {label}
       </button>
       <WalletSelectModal open={showModal} onClose={() => setShowModal(false)} />
-      {showUsername && <UsernameModal onSubmit={setUsername} onSkip={handleSkip} />}
+      {showUsername && <UsernameModal onSubmit={setUsername} onSkip={handleSkip} onClose={() => setShowUsername(false)} />}
     </>
   );
 }

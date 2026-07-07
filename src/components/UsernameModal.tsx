@@ -5,9 +5,10 @@ import { useState, useRef, useEffect } from 'react';
 interface UsernameModalProps {
   onSubmit: (username: string) => Promise<string | null>;
   onSkip: () => Promise<void>;
+  onClose: () => void;
 }
 
-export default function UsernameModal({ onSubmit, onSkip }: UsernameModalProps) {
+export default function UsernameModal({ onSubmit, onSkip, onClose }: UsernameModalProps) {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -24,6 +25,8 @@ export default function UsernameModal({ onSubmit, onSkip }: UsernameModalProps) 
     setBusy(false);
     if (err) {
       setError(err);
+    } else {
+      onClose();
     }
   };
 
@@ -58,7 +61,7 @@ export default function UsernameModal({ onSubmit, onSkip }: UsernameModalProps) 
         {error && <div className="username-error">{error}</div>}
         <div className="username-actions">
           <button className="username-btn" onClick={handleSubmit} disabled={busy}>
-            {busy ? 'Saving...' : 'Set Username'}
+            {busy ? <><span className="wallet-spinner" /> Saving...</> : 'Set Username'}
           </button>
           <button className="username-skip" onClick={onSkip} disabled={busy}>
             Skip
