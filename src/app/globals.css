@@ -614,9 +614,10 @@ header h1 span {
 /* Username glow + verified tag */
 .username-glow {
   font-weight: 700;
-  color: var(--text-primary);
-  text-shadow: 0 0 8px var(--accent-glow);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #7aa6f5;
+  text-shadow:
+    0 0 10px rgba(91,141,239,0.5),
+    0 0 20px rgba(91,141,239,0.2);
 }
 
 .username-glow.off {
