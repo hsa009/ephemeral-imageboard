@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     const powNonce = (formData.get('pow_nonce') as string)?.trim();
     const powTimestamp = parseInt(formData.get('pow_timestamp') as string);
     const username = (formData.get('username') as string)?.trim() || 'Anonymous';
+    const isVerifiedHandle = formData.get('is_verified_handle') === 'true';
     console.log('[Thread-Create] Received:', { 
       subjectLength: subject?.length,
       commentLength: comment?.length,
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest) {
         comment: sanitizedComment,
         image_filename: imageFilename,
         username: username,
+        is_verified_handle: isVerifiedHandle,
         author_ip,
         niche,
       })

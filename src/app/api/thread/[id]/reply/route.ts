@@ -31,6 +31,7 @@ export async function POST(
     const powNonce = (formData.get('pow_nonce') as string)?.trim();
     const powTimestamp = parseInt(formData.get('pow_timestamp') as string);
     const username = (formData.get('username') as string)?.trim() || 'Anonymous';
+    const isVerifiedHandle = formData.get('is_verified_handle') === 'true';
     const replyToId = formData.get('reply_to_id') ? parseInt(formData.get('reply_to_id') as string) : null;
     console.log('[Reply-Create] Received:', { 
       threadId, 
@@ -112,6 +113,7 @@ export async function POST(
         image_filename: imageFilename,
         author_ip,
         username,
+        is_verified_handle: isVerifiedHandle,
         reply_to_id: replyToId,
       })
       .select()

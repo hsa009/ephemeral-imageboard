@@ -61,6 +61,10 @@ CREATE INDEX IF NOT EXISTS idx_replies_reply_to ON replies(reply_to_id);
 -- Enable realtime for replies (for live updates)
 ALTER PUBLICATION supabase_realtime ADD TABLE replies;
 
+-- Migration: add verified handle flag to threads and replies
+ALTER TABLE threads ADD COLUMN IF NOT EXISTS is_verified_handle BOOLEAN DEFAULT FALSE;
+ALTER TABLE replies ADD COLUMN IF NOT EXISTS is_verified_handle BOOLEAN DEFAULT FALSE;
+
 -- Create users table for wallet auth
 CREATE TABLE IF NOT EXISTS users (
   wallet_address TEXT PRIMARY KEY,

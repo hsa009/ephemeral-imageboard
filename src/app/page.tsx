@@ -7,11 +7,13 @@ import { useSound, playSuccess, playError, playGhost } from "@/hooks/useSound";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { isThreadExpired } from "@/components/VoidTimer";
 import ConnectWallet from "@/components/ConnectWallet";
+import { useAuth } from "@/components/AuthProvider";
 
 interface Thread {
   id: number;
   subject: string;
   username?: string;
+  is_verified_handle?: boolean;
   comment: string;
   image_filename: string | null;
   created_at: string;
@@ -31,6 +33,7 @@ interface Reply {
   reactions: Record<string, number>;
   isNew?: boolean;
   username?: string;
+  is_verified_handle?: boolean;
   reply_to_id?: number | null;
 }
 
@@ -187,6 +190,8 @@ export default function Home() {
   const [previewPost, setPreviewPost] = useState<{ x: number; y: number; content: string } | null>(null);
   const [pendingReplies, setPendingReplies] = useState<{ id: string; comment: string; image_filename: string | null }[]>([]);
   const [currentPoW, setCurrentPoW] = useState<{ nonce: string; timestamp: number } | null>(null);
+  const { username: walletUsername, isAuthenticated } = useAuth();
+  const [useHandle, setUseHandle] = useState(false);
   const [viewMode, setViewMode] = useState<'threads' | 'images'>('threads');
   const [username, setUsername] = useState("");
   const [replyingTo, setReplyingTo] = useState<{ id: number; comment: string } | null>(null);
@@ -463,7 +468,9 @@ export default function Home() {
       formData.append("comment", comment);
       formData.append("pow_nonce", currentPoW.nonce);
       formData.append("pow_timestamp", currentPoW.timestamp.toString());
-      if (username) formData.append("username", username);
+      const effectiveThreadUser = useHandle ? (walletUsername || 'Anonymous') : (username.trim() || 'Anonymous');
+      formData.append("username", effectiveThreadUser);
+      formData.append("is_verified_handle", String(useHandle));
       if (imageFile) formData.append("image", imageFile);
       const res = await fetch("/api/thread/create", { method: "POST", body: formData });
       if (res.ok) {
@@ -525,7 +532,9 @@ export default function Home() {
       formData.append("comment", replyComment);
       formData.append("pow_nonce", currentPoW.nonce);
       formData.append("pow_timestamp", currentPoW.timestamp.toString());
-      if (username) formData.append("username", username);
+      const effectiveReplyUser = useHandle ? (walletUsername || 'Anonymous') : (username.trim() || 'Anonymous');
+      formData.append("username", effectiveReplyUser);
+      formData.append("is_verified_handle", String(useHandle));
       if (replyingTo) formData.append("reply_to_id", replyingTo.id.toString());
       if (replyImage) formData.append("image", replyImage);
       const res = await fetch(`/api/thread/${selectedThread.id}/reply`, { method: "POST", body: formData });
@@ -570,11 +579,6 @@ export default function Home() {
     const h = d.getHours().toString().padStart(2, '0');
     const m = d.getMinutes().toString().padStart(2, '0');
     return `${h}:${m}`;
-  };
-
-  const getInitials = (username?: string): string => {
-    if (!username || username === 'Anonymous') return '?';
-    return username.slice(0, 2).toUpperCase();
   };
 
   // Build nested reply tree from flat array
@@ -653,16 +657,14 @@ export default function Home() {
       const myPost = isMyPost(reply.id);
       const hasChildren = reply.children && reply.children.length > 0;
       const parentReply = reply.reply_to_id ? replyMap.get(reply.reply_to_id) : null;
-      const initials = getInitials(reply.username);
       const reactionKeys = Object.keys(reply.reactions || {});
 
       return (
         <div key={reply.id} className={`comment ${reply.isNew ? 'is-new' : ''}`} id={`comment-${reply.id}`}>
           <div className="comment-body">
-            <div className="avatar" title={getUserLabel(reply)}>{initials}</div>
             <div className="comment-content">
               <div className="comment-header">
-                <span className={`username ${myPost ? 'you' : ''}`}>{getUserLabel(reply)}</span>
+                <span className={`username ${myPost ? 'you' : ''}${reply.is_verified_handle ? ' verified' : ''}`}>{getUserLabel(reply)}</span>
                 {myPost && <span className="badge badge-you">You</span>}
                 <span className="comment-time" title={new Date(reply.created_at).toLocaleString()}>{redactTime(reply.created_at)}</span>
                 <span className="comment-time" style={{ color: 'var(--warning)' }} dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
@@ -811,7 +813,7 @@ export default function Home() {
               </div>
               <div className="thread-op-footer">
                 <div className="thread-meta">
-                  {selectedThread.username && selectedThread.username !== 'Anonymous' && <span className="username-display">{selectedThread.username} • </span>}
+                  {selectedThread.username && selectedThread.username !== 'Anonymous' && <span className={`username-display${selectedThread.is_verified_handle ? ' verified' : ''}`}>{selectedThread.username} • </span>}
                   Posted {new Date(selectedThread.created_at).toLocaleString()}
                 </div>
                 <div className="reactions" style={{ position: 'relative' }}>
@@ -848,7 +850,6 @@ export default function Home() {
             {pendingReplies.map(reply => (
               <div key={reply.id} className="comment pending">
                 <div className="comment-body">
-                  <div className="avatar">?</div>
                   <div className="comment-content">
                     <div className="comment-header">
                       <span className="username">Posting...</span>
@@ -864,7 +865,13 @@ export default function Home() {
                 <button className={`composer-cancel ${!replyingTo ? 'hidden' : ''}`} onClick={() => setReplyingTo(null)}>Cancel</button>
               </div>
               <div className="composer-body">
-                <input type="text" className="name-input" placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} aria-label="Your name (optional)" />
+                <div className="name-row">
+                  <input type="text" className={`name-input${useHandle ? ' use-handle' : ''}`} placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} aria-label="Your name (optional)" disabled={useHandle} />
+                  <label className={`handle-toggle${useHandle ? ' active' : ''}${!isAuthenticated ? ' disabled' : ''}`}>
+                    <input type="checkbox" checked={useHandle} onChange={() => { setUseHandle(v => !v); setUsername(''); }} disabled={!isAuthenticated} hidden />
+                    [ use_handle ]
+                  </label>
+                </div>
                 <textarea ref={replyTextareaRef} className="reply-textarea" placeholder="Write your reply..." value={replyComment} onChange={(e) => setReplyComment(e.target.value)} rows={3} aria-label="Write your reply" />
                 <div className="composer-footer">
                   <div className="composer-actions">
@@ -1027,7 +1034,13 @@ export default function Home() {
               <div className="form-row">
                 <div className="field-group">
                   <label className="field-label" htmlFor="thread-name">Name <span className="optional">(optional)</span></label>
-                  <input type="text" id="thread-name" className="text-input" placeholder="Anonymous" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} autoComplete="off" />
+                  <div className="name-row">
+                    <input type="text" id="thread-name" className={`text-input${useHandle ? ' use-handle' : ''}`} placeholder="Anonymous" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} autoComplete="off" disabled={useHandle} />
+                    <label className={`handle-toggle${useHandle ? ' active' : ''}${!isAuthenticated ? ' disabled' : ''}`}>
+                      <input type="checkbox" checked={useHandle} onChange={() => { setUseHandle(v => !v); setUsername(''); }} disabled={!isAuthenticated} hidden />
+                      [ use_handle ]
+                    </label>
+                  </div>
                 </div>
                 <div className="field-group">
                   <label className="field-label" htmlFor="thread-subject">Subject</label>
