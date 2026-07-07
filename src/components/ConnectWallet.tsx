@@ -33,7 +33,7 @@ export default function ConnectWallet() {
   }
 
   return (
-    <button className="connect-wallet" onClick={handleClick} disabled={loading && !isAuthenticated}>
+    <button className={`connect-wallet${isAuthenticated ? ' authenticated' : ''}`} onClick={handleClick} disabled={loading && !isAuthenticated}>
       {connecting || (loading && !isAuthenticated) ? (
         <span className="wallet-spinner" />
       ) : isAuthenticated ? (

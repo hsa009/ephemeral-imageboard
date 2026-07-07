@@ -1908,28 +1908,40 @@ header h1 span {
 }
 
 .connect-wallet {
-  background: transparent;
-  border: 1px solid var(--border-color);
+  background: rgba(255,255,255,0.02);
+  border: 1.5px dashed var(--border-color);
   color: var(--text-secondary);
   padding: 6px 14px;
   font-size: 0.75rem;
   font-family: monospace;
   cursor: pointer;
-  transition: all 0.2s;
-  border-radius: 2px;
+  transition: all 0.2s ease;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
 .connect-wallet:hover {
-  border-color: var(--accent);
-  color: var(--text-primary);
+  border-color: var(--warning);
+  color: var(--warning);
+  border-style: solid;
 }
 
 .connect-wallet:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.connect-wallet.authenticated {
+  border-color: rgba(239,91,91,0.5);
+  color: var(--danger);
+  border-style: dashed;
+}
+
+.connect-wallet.authenticated:hover {
+  border-color: var(--danger);
+  border-style: solid;
 }
 
 .wallet-dot {
