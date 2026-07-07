@@ -664,7 +664,10 @@ export default function Home() {
           <div className="comment-body">
             <div className="comment-content">
               <div className="comment-header">
-                <span className={`username ${myPost ? 'you' : ''}${reply.is_verified_handle ? ' verified' : ''}`}>{getUserLabel(reply)}</span>
+                <span className={`username-glow${reply.is_verified_handle ? '' : ' off'}${myPost ? ' you' : ''}`}>{getUserLabel(reply)}</span>
+                <span className={`tag-stack${reply.is_verified_handle ? '' : ' off'}`}>
+                  <span className="tag tag-verified">✓</span>
+                </span>
                 {myPost && <span className="badge badge-you">You</span>}
                 <span className="comment-time" title={new Date(reply.created_at).toLocaleString()}>{redactTime(reply.created_at)}</span>
                 <span className="comment-time" style={{ color: 'var(--warning)' }} dangerouslySetInnerHTML={{ __html: '#' + redactId(reply.id) }} />
@@ -813,7 +816,13 @@ export default function Home() {
               </div>
               <div className="thread-op-footer">
                 <div className="thread-meta">
-                  {selectedThread.username && selectedThread.username !== 'Anonymous' && <span className={`username-display${selectedThread.is_verified_handle ? ' verified' : ''}`}>{selectedThread.username} • </span>}
+                  {selectedThread.username && selectedThread.username !== 'Anonymous' && <>
+                    <span className={`username-display username-glow${selectedThread.is_verified_handle ? '' : ' off'}`}>{selectedThread.username}</span>
+                    <span className={`tag-stack${selectedThread.is_verified_handle ? '' : ' off'}`}>
+                      <span className="tag tag-verified">✓</span>
+                    </span>
+                    <span> • </span>
+                  </>}
                   Posted {new Date(selectedThread.created_at).toLocaleString()}
                 </div>
                 <div className="reactions" style={{ position: 'relative' }}>
@@ -867,10 +876,12 @@ export default function Home() {
               <div className="composer-body">
                 <div className="name-row">
                   <input type="text" className={`name-input${useHandle ? ' use-handle' : ''}`} placeholder="Name (optional)" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} aria-label="Your name (optional)" disabled={useHandle} />
-                  <label className={`handle-toggle${useHandle ? ' active' : ''}${!isAuthenticated ? ' disabled' : ''}`}>
-                    <input type="checkbox" checked={useHandle} onChange={() => { setUseHandle(v => !v); setUsername(''); }} disabled={!isAuthenticated} hidden />
-                    [ use_handle ]
-                  </label>
+                  <div className={`identity-toggle${!isAuthenticated ? ' disabled' : ''}`} role="switch" aria-checked={useHandle} tabIndex={0} onClick={() => { if (isAuthenticated) { setUseHandle(v => !v); setUsername(''); } }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && isAuthenticated) { e.preventDefault(); setUseHandle(v => !v); setUsername(''); } }}>
+                    <div className="pill-track">
+                      <div className="pill-knob"></div>
+                    </div>
+                    <span className="pill-label">Use Handle</span>
+                  </div>
                 </div>
                 <textarea ref={replyTextareaRef} className="reply-textarea" placeholder="Write your reply..." value={replyComment} onChange={(e) => setReplyComment(e.target.value)} rows={3} aria-label="Write your reply" />
                 <div className="composer-footer">
@@ -1034,12 +1045,14 @@ export default function Home() {
               <div className="form-row">
                 <div className="field-group">
                   <label className="field-label" htmlFor="thread-name">Name <span className="optional">(optional)</span></label>
-                  <div className="name-row">
+                    <div className="name-row">
                     <input type="text" id="thread-name" className={`text-input${useHandle ? ' use-handle' : ''}`} placeholder="Anonymous" value={username} onChange={(e) => setUsername(e.target.value)} maxLength={50} autoComplete="off" disabled={useHandle} />
-                    <label className={`handle-toggle${useHandle ? ' active' : ''}${!isAuthenticated ? ' disabled' : ''}`}>
-                      <input type="checkbox" checked={useHandle} onChange={() => { setUseHandle(v => !v); setUsername(''); }} disabled={!isAuthenticated} hidden />
-                      [ use_handle ]
-                    </label>
+                    <div className={`identity-toggle${!isAuthenticated ? ' disabled' : ''}`} role="switch" aria-checked={useHandle} tabIndex={0} onClick={() => { if (isAuthenticated) { setUseHandle(v => !v); setUsername(''); } }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && isAuthenticated) { e.preventDefault(); setUseHandle(v => !v); setUsername(''); } }}>
+                      <div className="pill-track">
+                        <div className="pill-knob"></div>
+                      </div>
+                      <span className="pill-label">Use Handle</span>
+                    </div>
                   </div>
                 </div>
                 <div className="field-group">
