@@ -25,18 +25,23 @@ export function verifyChallenge(challenge: string): { valid: boolean; error?: st
   return { valid: true };
 }
 
-export async function signJWT(walletAddress: string): Promise<string> {
-  return new SignJWT({ walletAddress })
+export async function signJWT(walletAddress: string, username?: string): Promise<string> {
+  const payload: Record<string, unknown> = { walletAddress };
+  if (username) payload.username = username;
+  return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(JWT_EXPIRES)
     .sign(JWT_SECRET);
 }
 
-export async function verifyJWT(token: string): Promise<{ walletAddress: string } | null> {
+export async function verifyJWT(token: string): Promise<{ walletAddress: string; username?: string } | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return { walletAddress: payload.walletAddress as string };
+    return {
+      walletAddress: payload.walletAddress as string,
+      username: payload.username as string | undefined,
+    };
   } catch {
     return null;
   }

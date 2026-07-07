@@ -61,7 +61,15 @@ CREATE INDEX IF NOT EXISTS idx_replies_reply_to ON replies(reply_to_id);
 -- Enable realtime for replies (for live updates)
 ALTER PUBLICATION supabase_realtime ADD TABLE replies;
 
+-- Create users table for wallet auth
+CREATE TABLE IF NOT EXISTS users (
+  wallet_address TEXT PRIMARY KEY,
+  username TEXT UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Allow public read/write access (disable RLS for now - add later for production)
 ALTER TABLE threads DISABLE ROW LEVEL SECURITY;
 ALTER TABLE replies DISABLE ROW LEVEL SECURITY;
 ALTER TABLE bans DISABLE ROW LEVEL SECURITY;
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;

@@ -2133,6 +2133,128 @@ header h1 span {
   color: var(--text-muted);
 }
 
+.username-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 15, 25, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.username-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 380px;
+  padding: 1.5rem;
+  animation: modalIn 0.25s ease-out;
+}
+
+.username-modal-title {
+  font-family: monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.username-modal-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.username-input {
+  width: 100%;
+  background: var(--bg-input, #1a1a1f);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  font-family: monospace;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.username-input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-glow);
+}
+
+.username-constraint {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.username-error {
+  background: rgba(239,91,91,0.1);
+  color: var(--danger);
+  font-size: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  font-family: monospace;
+}
+
+.username-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.username-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-family: monospace;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.username-btn:hover {
+  background: var(--accent-hover);
+}
+
+.username-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.username-skip {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-family: monospace;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.username-skip:hover {
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+.username-skip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .thread-niche {
   font-family: monospace;
   font-size: 0.7rem;
