@@ -2002,15 +2002,15 @@ header h1 span {
   background: rgba(255,255,255,0.02);
   border: 1.5px dashed var(--border-color);
   color: var(--text-secondary);
-  padding: 6px 14px;
-  font-size: 0.75rem;
+  padding: 10px 20px;
+  font-size: 0.85rem;
   font-family: monospace;
   cursor: pointer;
   transition: all 0.2s ease;
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .connect-wallet:hover {
