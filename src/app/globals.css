@@ -1199,39 +1199,77 @@ header h1 span {
 }
 
 /* Ghost Counter */
-.ghost-counter {
-  display: flex;
+.header-glitch {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.75rem;
+  gap: 10px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
-.ghost-ping {
-  width: 5px;
-  height: 5px;
-  background: #22c55e;
-  border-radius: 50%;
-  animation: ghost-ping 2s ease-in-out infinite;
-}
-
-@keyframes ghost-ping {
-  0%, 100% { opacity: 1; box-shadow: 0 0 4px #22c55e; }
-  50% { opacity: 0.3; box-shadow: 0 0 0px #22c55e; }
-}
-
-.ghost-count {
+.wordmark {
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--text-primary);
-  font-weight: 600;
-  letter-spacing: 1px;
+  letter-spacing: 0.08em;
+  position: relative;
+  display: inline-block;
 }
 
-.ghost-label {
-  color: var(--text-secondary);
-  opacity: 0.5;
+.wordmark::before {
+  content: '0null';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  color: #F87171;
+  clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+  animation: glitch1 2s infinite linear alternate-reverse;
+}
+
+.wordmark::after {
+  content: '0null';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  color: #22D3EE;
+  clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+  animation: glitch2 2.5s infinite linear alternate-reverse;
+}
+
+@keyframes glitch1 {
+  0%   { transform: translate(0); }
+  20%  { transform: translate(-2px, 1px); }
+  40%  { transform: translate(2px, -1px); }
+  60%  { transform: translate(-1px, 0); }
+  100% { transform: translate(0); }
+}
+
+@keyframes glitch2 {
+  0%   { transform: translate(0); }
+  20%  { transform: translate(2px, -1px); }
+  40%  { transform: translate(-2px, 1px); }
+  60%  { transform: translate(1px, 0); }
+  100% { transform: translate(0); }
+}
+
+.counter {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 2px 0 #F87171, -2px 0 #22D3EE;
+  animation: c1glitch 3s infinite;
+}
+
+@keyframes c1glitch {
+  0%, 90%, 100% { text-shadow: 2px 0 #F87171, -2px 0 #22D3EE; }
+  92%           { text-shadow: -2px 0 #F87171, 2px 0 #22D3EE; }
+  94%           { text-shadow: 2px 0 #F87171, -2px 0 #22D3EE; }
+}
+
+.sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
 }
 
 /* View Toggle */

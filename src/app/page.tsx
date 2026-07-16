@@ -760,7 +760,6 @@ export default function Home() {
       <div className="container">
         <header>
           <div className="header-left">
-            <h1><span>0null</span></h1>
             <GhostCounter onCountChange={(newCount, prevCount) => {
               if (newCount > prevCount && prevCount > 0) {
                 playGhost();
@@ -966,7 +965,6 @@ export default function Home() {
     <div className="container">
       <header>
         <div className="header-left">
-          <h1><span>0null</span></h1>
           <GhostCounter onCountChange={(newCount, prevCount) => {
             if (newCount > prevCount && prevCount > 0) {
               playGhost();
