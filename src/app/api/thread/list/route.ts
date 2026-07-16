@@ -2,8 +2,7 @@ export const runtime = 'edge';
 import '@/lib/polyfill';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getReadSignedUrl, s3Client, getBucketName } from '@/lib/s3';
-import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getReadSignedUrl } from '@/lib/s3';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -18,33 +17,6 @@ export async function GET(request: NextRequest) {
           SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
         }
       }, { status: 500 });
-    }
-    if (!s3Client) {
-      return NextResponse.json({ error: 'S3 not configured' }, { status: 500 });
-    }
-    // Cleanup pass: delete expired threads + their S3 images
-    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-    const { data: expired } = await supabaseAdmin
-      .from('threads')
-      .select('id, image_filename')
-      .lt('last_bumped_at', cutoff);
-    for (const thread of expired || []) {
-      const { data: ri } = await supabaseAdmin
-        .from('replies')
-        .select('image_filename')
-        .eq('thread_id', thread.id);
-      const keys = [
-        thread.image_filename,
-        ...(ri || []).map((r: any) => r.image_filename).filter(Boolean),
-      ];
-      for (const key of keys) {
-        try {
-          await s3Client.send(new DeleteObjectCommand({ Bucket: getBucketName(), Key: key! }));
-        } catch (e) {
-          console.error(`Failed to delete S3 image ${key}:`, e);
-        }
-      }
-      await supabaseAdmin.from('threads').delete().eq('id', thread.id);
     }
     // Build query
     let query = supabaseAdmin
