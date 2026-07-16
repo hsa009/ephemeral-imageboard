@@ -12,16 +12,13 @@ export default function ConnectWallet() {
   const [showModal, setShowModal] = useState(false);
   const [showUsername, setShowUsername] = useState(false);
 
-  // Auto-trigger sign challenge when wallet connects (no second click needed)
   useEffect(() => {
     if (loading) return;
     if (publicKey && !isAuthenticated) {
       login();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [publicKey, loading]);
 
-  // Show username prompt when authenticated but no username set
   useEffect(() => {
     if (!loading && isAuthenticated && !hasUsername) {
       setShowUsername(true);
@@ -62,18 +59,26 @@ export default function ConnectWallet() {
     }
   }
 
+  if (isAuthenticated) {
+    return (
+      <>
+        <button className="disconnect-btn" onClick={handleClick} aria-label="Disconnect wallet">
+          <span className="status-dot" aria-hidden="true"></span>
+          <span className="handle">{label}</span>
+          <span className="disconnect-label">disconnect</span>
+        </button>
+        {showUsername && <UsernameModal onSubmit={setUsername} onSkip={handleSkip} onClose={() => setShowUsername(false)} />}
+      </>
+    );
+  }
+
   return (
     <>
-      <button className={`connect-wallet${isAuthenticated ? ' authenticated' : ''}`} onClick={handleClick} disabled={loading && !isAuthenticated}>
-        {connecting || (loading && !isAuthenticated) ? (
-          <span className="wallet-spinner" />
-        ) : isAuthenticated ? (
-          <span className="wallet-dot" />
-        ) : null}
+      <button className="connect-wallet" onClick={handleClick} disabled={loading && !isAuthenticated}>
+        {(connecting || (loading && !isAuthenticated)) && <span className="wallet-spinner" />}
         {label}
       </button>
       <WalletSelectModal open={showModal} onClose={() => setShowModal(false)} />
-      {showUsername && <UsernameModal onSubmit={setUsername} onSkip={handleSkip} onClose={() => setShowUsername(false)} />}
     </>
   );
 }
