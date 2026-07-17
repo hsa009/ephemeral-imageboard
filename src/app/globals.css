@@ -1209,30 +1209,8 @@ header h1 span {
 .wordmark {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #fff;
   letter-spacing: 0.08em;
-  position: relative;
-  display: inline-block;
-}
-
-.wordmark::before {
-  content: '0null';
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  color: #F87171;
-  clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
-  animation: glitch1 2s infinite linear alternate-reverse;
-}
-
-.wordmark::after {
-  content: '0null';
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  color: #22D3EE;
-  clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
-  animation: glitch2 2.5s infinite linear alternate-reverse;
 }
 
 @keyframes glitch1 {
