@@ -147,11 +147,7 @@ async function generatePoW(): Promise<{ nonce: string; timestamp: number }> {
         resolve({ nonce: `${count}-${hash}`, timestamp });
       } else {
         count++;
-        if (count < 100000) {
-          check();
-        } else {
-          resolve({ nonce: `${count}-${hash}`, timestamp });
-        }
+        check();
       }
     };
     check();
@@ -463,13 +459,11 @@ export default function Home() {
     setLoading(true);
     setPowLoading(true);
     const { valid, error } = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
-    if (!valid) { 
-      alert(`Verification failed: ${error}. Generating new challenge...`); 
-      playError();
-      setLoading(false); 
-      setPowLoading(false); 
-      setCurrentPoW(await generatePoW()); 
-      return; 
+    if (!valid) {
+      setLoading(false);
+      setPowLoading(false);
+      setCurrentPoW(await generatePoW());
+      return;
     }
     const pendingId = `pending-${Date.now()}`;
     setPendingReplies([...pendingReplies, { id: pendingId, comment, image_filename: null }]);
@@ -528,13 +522,11 @@ export default function Home() {
     setLoading(true);
     setPowLoading(true);
     const { valid, error } = await verifyPoW(currentPoW.nonce, currentPoW.timestamp);
-    if (!valid) { 
-      alert(`Verification failed: ${error}. Generating new challenge...`); 
-      playError();
-      setLoading(false); 
-      setPowLoading(false); 
-      setCurrentPoW(await generatePoW()); 
-      return; 
+    if (!valid) {
+      setLoading(false);
+      setPowLoading(false);
+      setCurrentPoW(await generatePoW());
+      return;
     }
     const pendingId = `pending-${Date.now()}`;
     setPendingReplies([...pendingReplies, { id: pendingId, comment: replyComment, image_filename: null }]);
