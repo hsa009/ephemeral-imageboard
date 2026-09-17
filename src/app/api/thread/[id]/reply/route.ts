@@ -43,7 +43,6 @@ export async function POST(
     if (!comment) {
       return NextResponse.json({ error: 'Comment required' }, { status: 400 });
     }
-    // Verify PoW
     const powResult = verifyPoW(powNonce, powTimestamp);
     if (!powResult.valid) {
       console.error('[Reply-Create] PoW failed:', powResult.error, powResult.message);
@@ -51,7 +50,6 @@ export async function POST(
     }
     console.log('[Reply-Create] PoW verified!');
     const sanitizedComment = comment.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    // Check thread exists and not locked
     const { data: thread, error: threadError } = await supabaseAdmin
       .from('threads')
       .select('*')
@@ -67,7 +65,6 @@ export async function POST(
     if (thread.locked) {
       return NextResponse.json({ error: 'Thread is locked' }, { status: 403 });
     }
-    // Handle image
     let imageFilename = null;
     if (image && image.size > 0) {
       try {
@@ -89,7 +86,6 @@ export async function POST(
         }, { status: 500 });
       }
     }
-    // Hash IP
     let author_ip = 'anonymous';
     try {
       const rawIP = getClientIP(request);
@@ -103,7 +99,6 @@ export async function POST(
         error: hashErr instanceof Error ? hashErr.message : 'Hash failed',
       }, { status: 500 });
     }
-    // Insert reply
     console.log('[Reply-Create] Inserting reply...');
     const { data: reply, error: replyError } = await supabaseAdmin
       .from('replies')
@@ -125,7 +120,6 @@ export async function POST(
         error: replyError.message,
       }, { status: 500 });
     }
-    // Bump thread if under limit
     const shouldBump = thread.bump_count < BUMP_LIMIT;
     if (shouldBump) {
       await supabaseAdmin

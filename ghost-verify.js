@@ -12,9 +12,9 @@ client.on('connect', () => {
   console.log('Connected to SOCKS proxy, sending handshake...');
   
   const socksHandshake = Buffer.from([
-    0x05, // SOCKS version 5
-    0x01, // 1 authentication method
-    0x00  // No authentication
+    0x05,
+    0x01,
+    0x00
   ]);
   
   client.write(socksHandshake);
@@ -22,13 +22,12 @@ client.on('connect', () => {
 
 client.on('data', (data) => {
   if (data[0] === 0x05 && data[1] === 0x00) {
-    // Auth successful, now send connect request
     const connectRequest = Buffer.alloc(7 + targetHost.length);
-    connectRequest[0] = 0x05; // SOCKS version 5
-    connectRequest[1] = 0x01; // Connect command
-    connectRequest[2] = 0x00; // Reserved
-    connectRequest[3] = 0x03; // Domain name
-    connectRequest[4] = targetHost.length; // Length of domain
+    connectRequest[0] = 0x05;
+    connectRequest[1] = 0x01;
+    connectRequest[2] = 0x00;
+    connectRequest[3] = 0x03;
+    connectRequest[4] = targetHost.length;
     Buffer.from(targetHost).copy(connectRequest, 5);
     connectRequest[5 + targetHost.length] = (targetPort >> 8) & 0xFF;
     connectRequest[6 + targetPort.length] = targetPort & 0xFF;
@@ -36,7 +35,6 @@ client.on('data', (data) => {
     console.log('Auth OK, sending connect request...');
     client.write(connectRequest);
   } else if (data[0] === 0x05 && data[1] === 0x00) {
-    // Connection established
     console.log('Connected via Tor, fetching IP...');
     
     const req = https.get('https://check.torproject.org/api/ip', (res) => {

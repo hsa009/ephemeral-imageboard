@@ -8,7 +8,6 @@ import { verifyPoW, getClientIP } from '@/lib/pow';
 import { classifyNiche } from '@/lib/classifier';
 export async function POST(request: NextRequest) {
   try {
-    // Debug: log environment check (sanitized)
     console.log('[Thread-Create] Env check:', {
       supabaseUrl: !!process.env.SUPABASE_URL,
       supabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -40,7 +39,6 @@ export async function POST(request: NextRequest) {
     if (!subject || !comment) {
       return NextResponse.json({ error: 'Subject and comment required' }, { status: 400 });
     }
-    // Verify PoW
     console.log('[Thread-Create] Verifying PoW...');
     const powResult = verifyPoW(powNonce, powTimestamp);
     if (!powResult.valid) {
@@ -48,10 +46,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: powResult.message || 'Invalid proof of work', code: powResult.error }, { status: 403 });
     }
     console.log('[Thread-Create] PoW verified!');
-    // Sanitize inputs
     const sanitizedSubject = subject.replace(/[<>]/g, '');
     const sanitizedComment = comment.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    // Handle image upload
     let imageFilename = null;
     if (image && image.size > 0) {
       try {
@@ -76,7 +72,6 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
     }
-    // Hash IP for anonymity
     let author_ip = 'anonymous';
     try {
       const rawIP = getClientIP(request);
@@ -90,11 +85,9 @@ export async function POST(request: NextRequest) {
         error: hashErr instanceof Error ? hashErr.message : 'Hash failed',
       }, { status: 500 });
     }
-    // Classify niche using AI
     console.log('[Thread-Create] Classifying niche...');
     const classification = await classifyNiche(subject, comment);
     const niche = classification.niche;
-    // Insert into database
     console.log('[Thread-Create] Inserting thread...');
     const { data, error } = await supabaseAdmin
       .from('threads')

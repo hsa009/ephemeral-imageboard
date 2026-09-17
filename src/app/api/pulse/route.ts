@@ -9,25 +9,21 @@ export async function GET() {
   }
   try {
     const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
-    // Get threads with their reply counts in the last hour
     const { data: threads, error: threadsError } = await supabaseAdmin
       .from('threads')
       .select('id, subject, niche, last_bumped_at, bump_count, created_at, reactions, image_filename')
       .order('last_bumped_at', { ascending: false })
       .limit(50);
     if (threadsError) throw threadsError;
-    // Get reply counts in the last hour per thread
     const { data: recentReplies, error: repliesError } = await supabaseAdmin
       .from('replies')
       .select('thread_id')
       .gte('created_at', oneHourAgo);
     if (repliesError) throw repliesError;
-    // Count replies per thread
     const replyCountMap: Record<number, number> = {};
     for (const r of recentReplies || []) {
       replyCountMap[r.thread_id] = (replyCountMap[r.thread_id] || 0) + 1;
     }
-    // Calculate heat scores
     const scored = (threads || [])
       .filter(t => !isThreadExpired(t.last_bumped_at))
       .map(t => {
@@ -47,7 +43,6 @@ export async function GET() {
       })
       .sort((a, b) => b.heat_score - a.heat_score)
       .slice(0, 5);
-    // Normalize heat scores to 0-100 for the progress bar
     const maxScore = Math.max(...scored.map(s => s.heat_score), 1);
     const normalized = scored.map(s => ({
       ...s,

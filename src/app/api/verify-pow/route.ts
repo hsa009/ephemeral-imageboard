@@ -5,7 +5,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { nonce, timestamp } = body;
-    // Debug: log incoming request
     console.log('[Verify-PoW] Request:', { 
       noncePrefix: nonce?.substring(0, 10) || 'none',
       timestamp,

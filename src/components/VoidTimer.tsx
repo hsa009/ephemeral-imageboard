@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 
-// 48 hours in milliseconds
 const TTL_MS = 48 * 60 * 60 * 1000;
 
 interface VoidTimerProps {
@@ -30,10 +29,8 @@ export default function VoidTimer({ lastBumpAt, onExpired }: VoidTimerProps) {
       }
     };
 
-    // Calculate immediately
     calculateTimeLeft();
 
-    // Update every minute (or every second if under 1 hour)
     const remaining = new Date(lastBumpAt).getTime() + TTL_MS - Date.now();
     const interval = remaining < 3600000 ? 1000 : 60000;
 
@@ -41,11 +38,10 @@ export default function VoidTimer({ lastBumpAt, onExpired }: VoidTimerProps) {
     return () => clearInterval(timer);
   }, [lastBumpAt, onExpired]);
 
-  // Calculate visual severity
   const getUrgency = () => {
     if (isExpired) return 'expired';
-    if (timeLeft < 3600000) return 'critical'; // < 1 hour
-    if (timeLeft < 43200000) return 'warning'; // < 12 hours
+    if (timeLeft < 3600000) return 'critical';
+    if (timeLeft < 43200000) return 'warning';
     return 'normal';
   };
 
@@ -76,14 +72,12 @@ export default function VoidTimer({ lastBumpAt, onExpired }: VoidTimerProps) {
   );
 }
 
-// Utility function for filtering expired threads
 export function isThreadExpired(lastBumpAt: string): boolean {
   const now = Date.now();
   const expirationTime = new Date(lastBumpAt).getTime() + TTL_MS;
   return now >= expirationTime;
 }
 
-// Get time remaining for display
 export function getTimeRemaining(lastBumpAt: string): number {
   const now = Date.now();
   const expirationTime = new Date(lastBumpAt).getTime() + TTL_MS;

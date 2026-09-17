@@ -18,7 +18,6 @@ if (!isConfigured) {
 
 export const getBucketName = () => bucket;
 
-// S3 client with forcePathStyle for IDrive e2
 export const s3Client = isConfigured
   ? new S3Client({
       endpoint,
@@ -32,7 +31,6 @@ export const s3Client = isConfigured
     })
   : null;
 
-// Upload using presigned URL (bypasses Edge header mutation issues)
 export async function uploadDirect(key: string, body: Uint8Array, contentType: string): Promise<void> {
   if (!s3Client || !isConfigured) {
     throw new Error('S3 not configured');
@@ -41,7 +39,6 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
   console.log('Presigned Upload:', { key, size: body.length, contentType });
 
   try {
-    // Create presigned URL
     const command = new PutObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -51,7 +48,6 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
     console.log('Signed URL generated:', signedUrl.slice(0, 80) + '...');
 
-    // Upload using standard fetch
     const response = await fetch(signedUrl, {
       method: 'PUT',
       headers: {
@@ -73,8 +69,6 @@ export async function uploadDirect(key: string, body: Uint8Array, contentType: s
     throw error;
   }
 }
-
-// Get signed URL for reading (for thread list)
 
 export async function getReadSignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
   if (!s3Client || !isConfigured) {

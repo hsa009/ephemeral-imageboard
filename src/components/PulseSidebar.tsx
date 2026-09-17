@@ -84,7 +84,7 @@ export default function PulseSidebar({ onSelectThread }: PulseSidebarProps) {
 
   return (
     <>
-      {/* Desktop: Manila folder tab */}
+      {}
       <div className={`pulse-sidebar ${glitch ? 'pulse-glitch' : ''}`}>
         <div className="pulse-header">[ ACCESS_LOGS ]</div>
         <div className="pulse-items-container">
@@ -92,7 +92,7 @@ export default function PulseSidebar({ onSelectThread }: PulseSidebarProps) {
         </div>
       </div>
 
-      {/* Mobile trigger */}
+      {}
       <button
         className="pulse-mobile-trigger"
         onClick={() => setDrawerOpen(!drawerOpen)}

@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
     const threads: ThreadRow[] = allThreads || [];
     const cutoff = new Date(Date.now() - TTL_MS).toISOString();
 
-    // TTL pass — delete expired threads
     const expiredThreads = threads.filter(t => t.last_bumped_at < cutoff);
     let ttlDeleted = 0;
     for (const thread of expiredThreads) {
@@ -72,7 +71,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 150-cap pass — keep only top 150 non-expired threads
     const remainingThreads = threads.filter(t => t.last_bumped_at >= cutoff);
     const overflowThreads = remainingThreads.slice(MAX_THREADS);
     let capDeleted = 0;

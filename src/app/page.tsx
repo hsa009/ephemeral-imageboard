@@ -201,7 +201,6 @@ export default function Home() {
   const [openReactions, setOpenReactions] = useState<{ type: string; id: number } | null>(null);
   const previousGhostCount = useRef<number>(0);
   
-  // Refs for focusing inputs
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const createTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -227,7 +226,6 @@ export default function Home() {
     }
   }, [replyImage]);
 
-  // Auto-scroll to reply form when user clicks Reply
   const handleSetReplyingTo = (data: { id: number; comment: string }) => {
     setReplyingTo(data);
     setTimeout(() => {
@@ -248,7 +246,6 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [activeNiche, searchQuery]);
 
-  // Load mute state
   useEffect(() => {
     try {
       const stored = localStorage.getItem("0null_sound_muted");
@@ -256,7 +253,6 @@ export default function Home() {
     } catch {}
   }, []);
 
-  // Fetch pulse data every 60s
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -273,7 +269,6 @@ export default function Home() {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  // Keyboard shortcuts
   useKeyboardShortcuts({
     onReply: () => { setShowCreateForm(true); createTextareaRef.current?.focus(); },
     onViewImages: () => setViewMode('images'),
@@ -286,11 +281,9 @@ export default function Home() {
     },
     onSubmit: () => {
       if (selectedThread) {
-        // Trigger reply submit
         const btn = document.querySelector('.btn-reply-submit') as HTMLButtonElement;
         if (btn) btn.click();
       } else if (showCreateForm) {
-        // Trigger create form submit
         const btn = document.querySelector('.btn-create') as HTMLButtonElement;
         if (btn) btn.click();
       }
@@ -321,11 +314,9 @@ export default function Home() {
     });
   };
 
-  // Reaction toggle with optimistic updates
   const addReaction = async (type: string, id: number, emoji: string) => {
     const isAlreadyReacted = hasReacted(type, id, emoji);
     
-    // Prevent multiple rapid clicks
     const key = `${type}_${id}_${emoji}`;
     const inProgress = (window as unknown as { __reactionInProgress?: Record<string, boolean> }).__reactionInProgress;
     if (inProgress?.[key]) return;
@@ -334,7 +325,6 @@ export default function Home() {
       [key]: true 
     };
     
-    // Optimistic UI: update immediately
     const updateReactions = (items: (Thread | Reply)[], targetId: number): (Thread | Reply)[] => {
       return items.map(item => {
         if (item.id === targetId) {
@@ -355,14 +345,12 @@ export default function Home() {
       setReplies(prev => updateReactions(prev, id) as Reply[]);
     }
 
-    // Toggle localStorage
     if (isAlreadyReacted) {
       removeReaction(type, id, emoji);
     } else {
       saveReaction(type, id, emoji);
     }
 
-    // Send API request
     try {
       await fetch("/api/react", { 
         method: "POST", 
@@ -371,7 +359,6 @@ export default function Home() {
       });
     } catch (e) { 
       console.error("Failed to toggle reaction:", e);
-      // Rollback on error
       const rollbackUpdate = (items: (Thread | Reply)[], targetId: number): (Thread | Reply)[] => {
         return items.map(item => {
           if (item.id === targetId) {
@@ -431,7 +418,6 @@ export default function Home() {
       const res = await fetch(url);
       if (res.ok) { 
         const data = await res.json(); 
-        // Filter out expired threads
         const activeThreads = (data.threads || []).filter((t: { last_bumped_at: string }) => !isThreadExpired(t.last_bumped_at));
         setThreads(activeThreads); 
       }
@@ -479,10 +465,8 @@ export default function Home() {
       if (imageFile) formData.append("image", imageFile);
       const res = await fetch("/api/thread/create", { method: "POST", body: formData });
       if (res.ok) {
-        // Play success sound
         playSuccess();
         
-        // Reset all form state
         setSubject(""); 
         setComment(""); 
         setImageFile(null); 
@@ -495,7 +479,6 @@ export default function Home() {
         }
         if (data.thread?.id) saveMyPost(data.thread.id);
         
-        // Refresh data
         fetchThreads();
         setCurrentPoW(await generatePoW());
       } else {
@@ -544,7 +527,6 @@ export default function Home() {
       if (res.ok) {
         playSuccess();
         
-        // Reset all form state
         setReplyComment(""); 
         setReplyImage(null); 
         setReplyingTo(null);
@@ -552,7 +534,6 @@ export default function Home() {
         const data = await res.json();
         if (data.reply?.id) saveMyPost(data.reply.id);
         
-        // Refresh data
         fetchReplies(selectedThread.id); 
         fetchThreads();
         setCurrentPoW(await generatePoW());
@@ -584,30 +565,24 @@ export default function Home() {
     return `${h}:${m}`;
   };
 
-  // Build nested reply tree from flat array
   const replyTree = useMemo(() => {
     if (!replies || replies.length === 0) return [];
     
-    // Create a map of all replies by ID
     const replyMap = new Map<number, Reply & { children: Reply[] }>();
     
-    // First pass: create all nodes with empty children arrays
     replies.forEach(r => {
       replyMap.set(r.id, { ...r, children: [] as (Reply & { children: Reply[] })[] });
     });
     
-    // Second pass: build the tree structure
     const roots: (Reply & { children: Reply[] })[] = [];
     
     replies.forEach(r => {
       const node = replyMap.get(r.id)!;
       
       if (r.reply_to_id && replyMap.has(r.reply_to_id)) {
-        // This is a child reply - add to parent's children
         const parent = replyMap.get(r.reply_to_id)!;
         parent.children.push(node);
       } else {
-        // This is a root-level reply
         roots.push(node);
       }
     });
@@ -798,7 +773,7 @@ export default function Home() {
           </div>
         </header>
         <div className="header-divider" />
-        {/* Thread View */}
+        {}
         {viewMode === 'threads' && (
           <div className="thread-view">
             <div className="thread-op">
@@ -906,25 +881,10 @@ export default function Home() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
                       <span>Image</span>
                     </button>
-                    <input type="file" id="reply-image-input" accept="image/*" onChange={(e) => setReplyImage(e.target.files?.[0] || null)} style={{ display: 'none' }} />
-                    {replyImage && replyPreviewUrl && (
-                      <div className="image-preview visible">
-                        <img src={replyPreviewUrl} alt="Preview" />
-                        <button type="button" className="btn-remove-image" onClick={() => { setReplyImage(null); }}>×</button>
-                      </div>
-                    )}
-                  </div>
-                  <button className="btn-reply-submit" onClick={handleReply} disabled={loading || powLoading}>{powLoading ? "Verifying..." : loading ? "Posting..." : "Reply"}</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Images Gallery View */}
+                    <input type="file" id="reply-image-input" accept="image}
         {viewMode === 'images' && (
           <div className="image-gallery">
-            {/* Thread OP image */}
+            {}
             {selectedThread.image_filename && (
               <div className="gallery-item" onClick={() => setViewMode('threads')}>
                 <img src={selectedThread.image_filename} alt="" className="gallery-image" loading="lazy" />
@@ -934,7 +894,7 @@ export default function Home() {
                 </div>
               </div>
             )}
-            {/* Reply images */}
+            {}
             {replies.filter(r => r.image_filename).map(reply => (
               <div key={reply.id} className="gallery-item" onClick={() => setViewMode('threads')}>
                 <img src={reply.image_filename!} alt="" className="gallery-image" loading="lazy" />
@@ -1004,7 +964,7 @@ export default function Home() {
       </header>
       <div className="header-divider" />
       
-      {/* Niche Navigation */}
+      {}
       <div className="niche-nav">
         <button
           className={`niche-link ${activeNiche === 'all' ? 'active' : ''}`}
@@ -1045,7 +1005,7 @@ export default function Home() {
         <div className="niche-spacer" />
         <ConnectWallet />
       </div>
-      {/* Inline Thread Creation Form */}
+      {}
       <div className="inline-create">
         {!showCreateForm ? (
           <button className="start-thread-btn" onClick={() => { setShowCreateForm(true); createTextareaRef.current?.focus(); }}>
@@ -1100,37 +1060,7 @@ export default function Home() {
               <div className="field-group">
                 <label className="field-label">Image</label>
                 <div className="file-upload">
-                  <input type="file" id="thread-image" className="file-upload-input" accept="image/*" onChange={(e) => { setImageFile(e.target.files?.[0] || null); e.target.value = ''; }} />
-                  <button type="button" className="file-upload-button" tabIndex={-1} onClick={() => document.getElementById('thread-image')?.click()}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
-                    Choose File
-                  </button>
-                  <span className="file-name">{imageFile ? imageFile.name : 'No file chosen'}</span>
-                </div>
-                {imageFile && (
-                  <div className="image-preview visible">
-                    <img src={previewUrl!} alt="Preview" />
-                    <button type="button" className="btn-remove-image" onClick={() => { setImageFile(null); }}>×</button>
-                  </div>
-                )}
-              </div>
-            </div>
-            {createError && <div className="form-error">{createError}</div>}
-            <div className="form-footer">
-              <div></div>
-              <button type="button" className="btn-create" onClick={handleCreateThread} disabled={loading || powLoading}>
-                {powLoading ? "Computing PoW..." : loading ? "Posting..." : "Create"}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Active Pulse Section */}
+                  <input type="file" id="thread-image" className="file-upload-input" accept="image}
       {!loading && pulseData.length > 0 && (
         <div className="active-pulse">
           <div className="active-pulse-header">[ peak ]</div>
@@ -1170,7 +1100,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Thread Catalog */}
+      {}
       {loading ? (
         <div className="loading">Loading</div>
       ) : (

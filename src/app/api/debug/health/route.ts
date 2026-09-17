@@ -15,7 +15,6 @@ export async function GET() {
     services: {},
     envCheck: {},
   };
-  // Check environment variables (without leaking values)
   results.envCheck = {
     SUPABASE_URL: !!process.env.SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -33,7 +32,6 @@ export async function GET() {
     CRON_SECRET: !!process.env.CRON_SECRET,
     IP_SALT: !!process.env.IP_SALT,
   };
-  // Test Supabase Connection
   try {
     if (!supabaseAdmin) {
       results.services.supabase = { status: 'FAIL', error: 'Supabase client not initialized' };
@@ -55,7 +53,6 @@ export async function GET() {
       error: err instanceof Error ? err.message : 'Unknown error' 
     };
   }
-  // Test IDrive S3 Connection
   const endpoint = process.env.IDRIVE_E2_ENDPOINT || '';
   try {
     const bucket = getBucketName();
@@ -64,7 +61,6 @@ export async function GET() {
     } else if (!endpoint) {
       results.services.idrive = { status: 'FAIL', error: 'Endpoint not configured' };
     } else {
-      // Simple GET test - try to fetch bucket root
       const testUrl = `${endpoint}/${bucket}/`;
       const response = await fetch(testUrl, { method: 'HEAD' });
       if (response.ok || response.status === 403 || response.status === 404) {
@@ -79,7 +75,6 @@ export async function GET() {
       error: err instanceof Error ? err.message : 'Unknown error' 
     };
   }
-  // Test IP Hashing / Web Crypto
   try {
     const encoded = new TextEncoder().encode('test-ip:test-salt');
     const buf = new Uint8Array(encoded.length);
@@ -107,7 +102,6 @@ export async function GET() {
       error: err instanceof Error ? err.message : 'Unknown error' 
     };
   }
-  // Test PoW Verification
   try {
     results.services.pow = { status: 'PASS', details: { difficulty: '0000', maxAge: 60000 } };
   } catch (err) {
@@ -116,7 +110,6 @@ export async function GET() {
       error: err instanceof Error ? err.message : 'Unknown error' 
     };
   }
-  // Overall status
   const allPass = Object.values(results.services).every(s => s.status === 'PASS');
   results.status = allPass ? 'HEALTHY' : 'DEGRADED';
   return NextResponse.json(results, { 

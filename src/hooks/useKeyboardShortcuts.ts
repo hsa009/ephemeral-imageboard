@@ -12,14 +12,12 @@ interface ShortcutHandlers {
 
 export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Don't fire if user is typing in an input/textarea
     const target = e.target as HTMLElement;
     const isInput = target.tagName === "INPUT" || 
                     target.tagName === "TEXTAREA" || 
                     target.isContentEditable;
 
     if (isInput) {
-      // Allow Cmd/Ctrl + Enter for submit even in inputs
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         handlers.onSubmit?.();
@@ -28,7 +26,6 @@ export function useKeyboardShortcuts(handlers: ShortcutHandlers) {
       return;
     }
 
-    // Global shortcuts (not in inputs)
     switch (e.key.toLowerCase()) {
       case "r":
         e.preventDefault();

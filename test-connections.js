@@ -21,7 +21,6 @@ const s3Client = new S3Client({
 async function testConnections() {
   console.log('=== PHASE 1 VALIDATION TEST ===\n');
   
-  // Test 1: Supabase connection
   console.log('1. Testing Supabase connection...');
   try {
     const response = await fetch(`${supabaseUrl}/rest/v1/`, {
@@ -41,7 +40,6 @@ async function testConnections() {
     console.log('   ❌ Supabase failed:', e.message);
   }
   
-  // Test 2: IDrive e2
   console.log('\n2. Testing IDrive e2 connection...');
   try {
     const result = await s3Client.send(new ListObjectsV2Command({ Bucket: bucket, MaxKeys: 1 }));

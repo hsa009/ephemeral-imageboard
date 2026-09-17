@@ -2,11 +2,9 @@
 
 import { useState, useCallback } from "react";
 
-// Audio Context - lazily initialized
 let audioContext: AudioContext | null = null;
 let isMutedGlobal = false;
 
-// Mute storage key
 const MUTE_STORAGE_KEY = "0null_sound_muted";
 
 function getAudioContext(): AudioContext {
@@ -24,7 +22,6 @@ function initAudio() {
   }
 }
 
-// Load mute state from localStorage
 function loadMuteState(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -35,18 +32,15 @@ function loadMuteState(): boolean {
   }
 }
 
-// Save mute state to localStorage
 function saveMuteState(muted: boolean) {
   if (typeof window === "undefined") return;
   isMutedGlobal = muted;
   try {
     localStorage.setItem(MUTE_STORAGE_KEY, muted ? "true" : "false");
   } catch {
-    // Ignore
   }
 }
 
-// playSuccess: Square wave, 880Hz, 0.1s - Mechanical click
 export function playSuccess() {
   if (isMutedGlobal) return;
   try {
@@ -71,7 +65,6 @@ export function playSuccess() {
   }
 }
 
-// playError: Sawtooth wave, 110Hz, 0.3s - Digital glitch
 export function playError() {
   if (isMutedGlobal) return;
   try {
@@ -96,7 +89,6 @@ export function playError() {
   }
 }
 
-// playGhost: Sine wave, 1200Hz, 0.8s with exponential decay - Ethereal ping
 export function playGhost() {
   if (isMutedGlobal) return;
   try {
@@ -121,7 +113,6 @@ export function playGhost() {
   }
 }
 
-// Hook for managing mute state
 export function useSound() {
   const [muted, setMuted] = useState<boolean>(() => {
     if (typeof window !== "undefined") {

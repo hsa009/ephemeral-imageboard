@@ -18,17 +18,14 @@ export async function GET(request: NextRequest) {
         }
       }, { status: 500 });
     }
-    // Build query
     let query = supabaseAdmin
       .from('threads')
       .select('*')
       .order('last_bumped_at', { ascending: false })
       .limit(150);
-    // Filter by niche if provided
     if (niche && niche !== 'all') {
       query = query.eq('niche', niche);
     }
-    // Full-text search if provided
     if (search && search.trim()) {
       const searchTerm = search.trim().split(/\s+/).join(' & ');
       query = query.textSearch('fts', searchTerm);
